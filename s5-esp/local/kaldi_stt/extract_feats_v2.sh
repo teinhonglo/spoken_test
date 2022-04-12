@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+
+stage=0
+test_sets="voice_2022"
+model_dir=../models/Librispeech-model-mct-tdnnf
+model_name=
+graph_affix=tgsmall
+data_root=data
+max_nj=20
+
+. ./cmd.sh
+. ./path.sh
+. parse_options.sh
+
+model=$model_dir/model
+ivec_extractor=$model_dir/extractor
+ivec_dir=$model_dir/model_online
+lang=$model_dir/data/lang
+mfcc_config=$model_dir/conf/mfcc_hires.conf
+cmvn_config=$model_dir/conf/online_cmvn.conf
+
+if [ -z $graph_affix ]; then
+    graph_affix=_tgsmall
+fi
+
+graph_dir=$model_dir/model/graph${graph_affix}
+
+if [ $stage -le -2 ]; then    
+    for test_set in $test_sets; do 
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        
+        steps/make_mfcc.sh --nj $nspk \
+          --mfcc-config $mfcc_config \
+          --cmd "$train_cmd" $data_root/${test_set} || exit 1;
+        steps/compute_cmvn_stats.sh $data_root/${test_set} || exit 1;
+        utils/fix_data_dir.sh $data_root/${test_set}
+    done
+fi
+
+if [ $stage -le -1 ]; then
+    for test_set in $test_sets; do
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        steps/online/nnet2/extract_ivectors_online.sh --cmd "$train_cmd" --nj $nspk \
+          $data_root/${test_set} $ivec_extractor \
+          $ivec_dir/ivectors_${test_set} || exit 1;
+   done
+fi
+
+if [ $stage -le 0 ]; then
+    # note: if the features change (e.g. you add pitch features), you will have to
+    # change the options of the following command line.
+    if [ ! -d ${model}_online ]; then
+        steps/online/nnet3/prepare_online_decoding.sh \
+            --mfcc-config $mfcc_config \
+            --online_cmvn_config $cmvn_config \
+            $lang $ivec_extractor $model ${model}_online
+    fi
+
+    for test_set in $test_sets; do
+        nspk=$(wc -l <data/${test_set}/spk2utt)
+        # note: we just give it "data/${test_set}" as it only uses the wav.scp, the
+        # feature type does not matter.
+        if [ $nspk -gt $max_nj ]; then
+            nspk=$max_nj
+        fi
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        steps/online/nnet3/decode.sh \
+          --acwt 1.0 --post-decode-acwt 10.0 \
+          --nj $nspk --cmd "$decode_cmd" \
+          $graph_dir $data_root/${test_set} ${decode_dir} || exit 1
+
+    done
+fi
+
+if [ $stage -le 1 ]; then
+    for test_set in $test_sets; do
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        dest_dir=$data_root/$test_set/$model_name
+        if [ ! -d $dest_dir ]; then
+            mkdir -p $dest_dir
+        fi
+        
+        utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
+        recog_text=$decode_dir/scoring_kaldi/penalty_0.0/10.txt
+        echo "Copy from $recog_text to $dest_dir/text"
+        cp $recog_text $dest_dir/text
+    done
+fi
+
+if [ $stage -le 2 ]; then
+    for test_set in $test_sets; do
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        
+        echo "Align $data_dir with $model"
+        dest_dir=$data_root/$test_set/$model_name
+        data_dir=$dest_dir
+        ivectors_data_dir=$ivec_dir/ivectors_${test_set}
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        result_dir=${decode_dir}/align
+        # steps/chain/align_lats_ctm.sh <data-dir> <lang-dir> <src-dir> <align-dir>
+        local/kaldi_stt/align_lats_ctm.sh --cmd "queue.pl" --nj $nspk --online-ivector-dir $ivectors_data_dir --generate_ali_from_lats true $data_dir $lang $model $result_dir
+   done
+fi
+
+if [ $stage -le 3 ]; then
+    for test_set in $test_sets; do
+        
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        
+        dest_dir=$data_root/$test_set/$model_name
+        data_dir=$dest_dir
+        ivectors_data_dir=$ivec_dir/ivectors_${test_set}
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        result_dir=${decode_dir}/gop
+        log_dir=${result_dir}/log
+        json_dir=${result_dir}/json
+        
+        echo "Computing GOP of $data_dir with $model"
+        
+        local/gop/compute-dnn-bi-gop.sh --nj "$nspk" --cmd "queue.pl" --split_per_speaker "true" $data_dir $ivectors_data_dir \
+              $lang $model $result_dir    ### dnn model    
+    done
+fi
+
+if [ $stage -le 4 ]; then
+    for test_set in $test_sets; do
+        
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        
+        dest_dir=$data_root/$test_set/$model_name
+        data_dir=$dest_dir
+        ivectors_data_dir=$ivec_dir/ivectors_${test_set}
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        result_dir=${decode_dir}/gop
+        log_dir=${result_dir}/log
+        json_dir=${result_dir}/json
+        text_fn=$dest_dir/text
+        mkdir -p $json_dir
+        
+        echo "Processing GOP result of $data_dir with $model"
+         
+        python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/sample_worker_en.yaml
+    done
+fi
+
+if [ $stage -le 5 ]; then
+    for test_set in $test_sets; do
+        nspk=$(wc -l <$data_root/$test_set/spk2utt)
+        
+        if [ $nspk -ge $max_nj ]; then
+            nspk=$max_nj;
+        fi
+        
+        data_dir=$data_root/$test_set        
+        dest_dir=$data_root/$test_set/$model_name
+        decode_dir=${model}_online/decode_${test_set}${graph_affix}
+        result_dir=${decode_dir}/gop
+        json_dir=${result_dir}/json
+        
+        python local/kaldi_stt/prepare_feats.py --data_dir $data_dir --model_name $model_name --gop_result_dir $result_dir --gop_json_fn $json_dir/gop_scores.json
+    done
+fi
+
+echo "Extracting Done."
