@@ -5,11 +5,14 @@ data_name=spoken_test_2022_jan28
 model_name=gigaspeech
 model_tag="Shinji Watanabe/gigaspeech_asr_train_asr_raw_en_bpe5000_valid.acc.ave"
 replace_text=false
+vad_mode=0
 data_root=data
 
 . ./cmd.sh
 . ./path.sh
 . parse_options.sh
+
+set -euo pipefail
 
 if [ $stage -le -3 ]; then
     find $data_root/$data_name -name "*.wav" -size -45k
@@ -29,7 +32,10 @@ fi
 conda activate
 
 if [ $stage -le 0 ]; then
-    ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name --model_name $model_name --model_tag "$model_tag"
+    ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name \
+                                    --model_name $model_name --model_tag "$model_tag" \
+                                    --vad_mode $vad_mode
+    
     dest_dir=$data_root/$data_name/$model_name
     
     if [ $replace_text == "true" ]; then

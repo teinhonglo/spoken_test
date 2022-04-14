@@ -49,16 +49,16 @@ def get_stats(numeric_list, prefix=""):
     
 class SpeechModel(object):
     def __init__(self, recog_dict, gop_result_dir, gop_json_fn):
-        # STT related
+        # STT
         self.recog_dict = recog_dict
         self.gop_ctm_info = self.get_gop_ctm(gop_result_dir, gop_json_fn)
-        # Fluency related
+        # Fluency
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
         self.disflunecy_words = ["AH", "UM", "UH", "EM"]
         self.special_words = ["<UNK>"]
     
-    # STT-related features
+    # STT features
     def recog(self, uttid):
         text = self.recog_dict[uttid]
         return text
@@ -103,7 +103,7 @@ class SpeechModel(object):
         
         return gop_ctm_info
     
-    # Fluency-related features
+    # Fluency features
     def sil_feats(self, ctm_info, response_duration):
         # > 0.145
         sil_list = []

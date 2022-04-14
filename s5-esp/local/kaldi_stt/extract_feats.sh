@@ -12,6 +12,8 @@ max_nj=20
 . ./path.sh
 . parse_options.sh
 
+set -euo pipefail
+
 model=$model_dir/model
 ivec_extractor=$model_dir/extractor
 ivec_dir=$model_dir/model_online

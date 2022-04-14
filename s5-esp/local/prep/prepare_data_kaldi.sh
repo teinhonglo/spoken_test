@@ -12,6 +12,8 @@ data_root=data
 . ./path.sh
 . parse_options.sh
 
+set -euo pipefail
+
 if [ $stage -le -3 ]; then
     find $data_root/$data_name -name "*.wav" -size -45k
     exit 0;

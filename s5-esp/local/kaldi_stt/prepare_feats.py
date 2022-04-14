@@ -79,7 +79,6 @@ for i, uttid in tqdm(enumerate(utt_list)):
     text = speech_model.recog(uttid)
     # alignment (stt)
     ctm_info = speech_model.get_ctm(uttid)
-    print(uttid, ctm_info)
     sil_feats_info = speech_model.sil_feats(ctm_info, response_duration)
     word_feats_info = speech_model.word_feats(ctm_info, response_duration)
     all_info[uttid] = {"stt": text, "prompt": text_prompt, "wav_path": wav_path, "ctm": ctm_info, "feats": {**f0_info, **energy_info, **sil_feats_info, **word_feats_info}}

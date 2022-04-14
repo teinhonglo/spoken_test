@@ -4,6 +4,8 @@ import soundfile
 from tqdm import tqdm
 from espnet_models import SpeechModel
 from audio_models import AudioModel
+from vad_model import VadModel
+import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -19,6 +21,14 @@ parser.add_argument("--model_tag",
 parser.add_argument("--model_name",
                     default="gigaspeech",
                     type=str)
+                    
+parser.add_argument("--sample_rate",
+                    default=16000,
+                    type=int)
+
+parser.add_argument("--vad_mode",
+                    default=1,
+                    type=int)                    
 
 args = parser.parse_args()
 
@@ -26,6 +36,9 @@ args = parser.parse_args()
 data_dir = args.data_dir
 model_name = args.model_name
 model_tag = args.model_tag
+sample_rate = args.sample_rate
+vad_mode = args.vad_mode
+
 output_dir = os.path.join(data_dir, model_name)
 
 if not os.path.exists(output_dir):
@@ -40,6 +53,7 @@ all_info = {}
 
 speech_model = SpeechModel(tag)
 audio_model = AudioModel()
+vad_model = VadModel(vad_mode, sample_rate)
 
 with open(data_dir + "/wav.scp", "r") as fn:
     for i, line in enumerate(fn.readlines()):
@@ -57,7 +71,8 @@ for i, uttid in tqdm(enumerate(utt_list)):
     text_prompt = text_dict[uttid]
     # Confirm the sampling rate is equal to that of the training corpus.
     # If not, you need to resample the audio data before inputting to speech2text
-    speech, rate = soundfile.read(wav_path)
+    audio, rate = vad_model.read_wave(wav_path)
+    speech = np.frombuffer(audio, dtype='int16').astype(np.float32) / 32768.0
     assert rate == 16000
     
     response_duration = speech.shape[0] / rate
@@ -65,7 +80,12 @@ for i, uttid in tqdm(enumerate(utt_list)):
     _, f0_info = audio_model.get_f0(speech)
     _, energy_info = audio_model.get_energy(speech)
     # fluency feature and confidence feature
-    text = speech_model.recog(speech)
+    speechs = vad_model.get_speech_segments(audio, rate)
+    text = []
+    for speech_seg in speechs:
+        text_seg = speech_model.recog(speech_seg)
+        text.append(text_seg)
+    text = " ".join(" ".join(text).split())
     # alignment (stt)
     ctm_info = speech_model.get_ctm(speech, text)
     sil_feats_info = speech_model.sil_feats(ctm_info, response_duration)
