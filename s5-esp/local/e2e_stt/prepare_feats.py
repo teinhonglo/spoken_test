@@ -32,7 +32,6 @@ parser.add_argument("--vad_mode",
 
 args = parser.parse_args()
 
-
 data_dir = args.data_dir
 model_name = args.model_name
 model_tag = args.model_tag

@@ -25,7 +25,7 @@ class Frame(object):
         self.duration = duration
 
 class VadModel(object):
-    def __init__(self, mode=1, sample_rate=16000):
+    def __init__(self, mode=1, sample_rate=16000, frame_duration_ms=30):
         '''
         Integer in {0,1,2,3} specifying the VAD aggressiveness.
         0 is the least aggressive
@@ -37,6 +37,7 @@ class VadModel(object):
             self.mode = mode
         self.vad = webrtcvad.Vad(self.mode)
         self.sample_rate = sample_rate
+        self.frame_duration_ms = frame_duration_ms
         
     def read_wave(self, path):
         """Reads a .wav file.
@@ -140,9 +141,10 @@ class VadModel(object):
         Compute and print the segments for the given uttid. It is in the format:
         <segment-id> <utt-id> <start-time> <end-time>
         """
-        frames = self.frame_generator(30, audio, sample_rate)
+        frame_duration_ms = self.frame_duration_ms
+        frames = self.frame_generator(frame_duration_ms, audio, sample_rate)
         frames = list(frames)
-        segments = self.vad_segments(sample_rate, 30, 300, frames)
+        segments = self.vad_segments(sample_rate, frame_duration_ms, 300, frames)
         speech = np.frombuffer(audio, dtype='int16').astype(np.float32) / 32768.0
         voiced_speechs = []
         

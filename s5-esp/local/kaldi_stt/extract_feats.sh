@@ -89,7 +89,7 @@ if [ $stage -le 1 ]; then
         fi
         
         utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
-        recog_text=$decode_dir/scoring_kaldi/penalty_0.0/10.txt
+        recog_text=$decode_dir/scoring_kaldi/penalty_0.5/17.txt
         echo "Copy from $recog_text to $dest_dir/text"
         cp $recog_text $dest_dir/text
     done
@@ -103,9 +103,10 @@ if [ $stage -le 2 ]; then
             nspk=$max_nj;
         fi
         
-        echo "Align $data_dir with $model"
         dest_dir=$data_root/$test_set/$model_name
         data_dir=$dest_dir
+        
+        echo "Align $data_dir with $model"
         ivectors_data_dir=$ivec_dir/ivectors_${test_set}
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         result_dir=${decode_dir}/align
