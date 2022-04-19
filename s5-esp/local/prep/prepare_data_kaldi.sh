@@ -26,7 +26,7 @@ fi
 eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"
 
 if [ $stage -le -1 ]; then
-    python local/prep/repaire_and_resample.py --data_dir $data_root/$data_name
+    python local/prep/repair_and_resample.py --data_dir $data_root/$data_name
 fi
 
 conda activate

@@ -56,9 +56,9 @@ class SpeechModel(object):
         if is_download:
             d=ModelDownloader(cachedir=cache_dir)
             asr_model = d.download_and_unpack(tag)
-            self.speech2text = Speech2Text(
+            self.speech2text = Speech2Text.from_pretrained(
                 **asr_model,
-                device="cuda",
+                device="cpu",
                 maxlenratio=0.0,
                 minlenratio=0.0,
                 beam_size=20,
@@ -117,25 +117,27 @@ class SpeechModel(object):
         
         return ctm_info
     
-    # Fluency-related features
+    # Fluency features
     def sil_feats(self, ctm_info, response_duration):
         # > 0.145
         sil_list = []
         # > 0.495
         long_sil_list = []
-        word, start_time, duration, conf = ctm_info[0]
-        end_time = start_time + duration
-        
-        for word, start_time, duration, conf in ctm_info[1:]:
-            interval_word_duration = start_time - end_time
-            
-            if interval_word_duration > self.sil_seconds:
-                sil_list.append(interval_word_duration)
-            
-            if interval_word_duration > self.long_sil_seconds:
-                long_sil_list.append(interval_word_duration)
-            
+        if len(ctm_info) > 2:
+            word, start_time, duration, conf = ctm_info[0]
             end_time = start_time + duration
+            
+            for word, start_time, duration, conf in ctm_info[1:]:
+                interval_word_duration = start_time - end_time
+                
+                if interval_word_duration > self.sil_seconds:
+                    sil_list.append(interval_word_duration)
+                
+                if interval_word_duration > self.long_sil_seconds:
+                    long_sil_list.append(interval_word_duration)
+                
+                end_time = start_time + duration
+        
         
         sil_stats = get_stats(sil_list, prefix="sil_")
         long_sil_stats = get_stats(long_sil_list, prefix="long_sil_")
@@ -148,10 +150,19 @@ class SpeechModel(object):
         num_words = len(ctm_info)
         
         sil_stats["sil_rate1"] = num_sils / response_duration
-        sil_stats["sil_rate2"] = num_sils / num_words
+        
+        if num_words > 0:
+            sil_stats["sil_rate2"] = num_sils / num_words
+        else:
+            sil_stats["sil_rate2"] = 0
         
         long_sil_stats["long_sil_rate1"] = num_long_sils / response_duration 
-        long_sil_stats["long_sil_rate2"] = num_long_sils / num_words
+        
+        if num_words > 0:
+            long_sil_stats["long_sil_rate2"] = num_long_sils / num_words
+        else:
+            long_sil_stats["long_sil_rate2"] = 0
+        
         sil_dict = merge_dict(sil_stats, long_sil_stats)
         
         return sil_dict
@@ -174,7 +185,6 @@ class SpeechModel(object):
             
         # strat_time and duration of last word
         # word in articlulation time
-        word_articluation_freq = word_count / (start_time + duration)
         word_freq = word_count / response_duration
         word_duration_stats = get_stats(word_duration_list, prefix = "word_duration_")
         word_conf_stats = get_stats(word_conf_list, prefix="word_conf_")
@@ -182,7 +192,6 @@ class SpeechModel(object):
         word_basic_dict = {   
                         "word_count": word_count,
                         "word_freq": word_freq,
-                        "word_articulation_freq": word_articluation_freq, 
                         "word_num_disfluency": num_disfluecy
                     }
         word_stats_dict = merge_dict(word_duration_stats, word_conf_stats)
