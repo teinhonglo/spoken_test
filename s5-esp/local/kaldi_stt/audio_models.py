@@ -62,8 +62,10 @@ class AudioModel(object):
                                              fmax=librosa.note_to_hz('C7'))
         f0_list = np.nan_to_num(f0_list)
         f0_stats = get_stats(f0_list, prefix="f0_")
+        f0_nz_list = np.nonzero(f0_list)
+        f0_nz_stats = get_stats(f0_nz_list, prefix="f0_nz_")
         
-        return [f0_list, f0_stats]
+        return [f0_list, f0_stats, f0_nz_list, f0_nz_stats]
     
     def get_energy(self, speech):
         # alignment (stt)
