@@ -21,7 +21,7 @@ def merge_dict(first_dict, second_dict):
 def get_stats(numeric_list, prefix=""):
     # number, mean, standard deviation (std), median, mean absolute deviation
     stats_np = np.array(numeric_list)
-    number = len(stats_np) 
+    number = len(stats_np)
     
     if number == 0:
         summ = 0.
@@ -62,7 +62,7 @@ class AudioModel(object):
                                              fmax=librosa.note_to_hz('C7'))
         f0_list = np.nan_to_num(f0_list)
         f0_stats = get_stats(f0_list, prefix="f0_")
-        f0_nz_list = np.nonzero(f0_list)
+        f0_nz_list = f0_list[np.nonzero(f0_list)]
         f0_nz_stats = get_stats(f0_nz_list, prefix="f0_nz_")
         
         return [f0_list, f0_stats, f0_nz_list, f0_nz_stats]
@@ -76,4 +76,11 @@ class AudioModel(object):
         
         return [rms_list, rms_stats]
     
-     
+if __name__ == "__main__":
+    import soundfile
+    wav_path = "data/spoken_test_2022_jan28/wavs/0910102838/0910102838-2-6-2022_1_13.wav"
+    speech, rate = soundfile.read(wav_path)
+    assert rate == 16000
+    
+    audio_model = AudioModel()
+    _, f0_info, _, f0_nz_info = audio_model.get_f0(speech)

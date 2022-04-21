@@ -89,7 +89,9 @@ if [ $stage -le 1 ]; then
         fi
         
         utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
-        recog_text=$decode_dir/scoring_kaldi/penalty_0.5/17.txt
+        best_wer=../models/Librispeech-model-mct-tdnnf/model_online/decode_spoken_test_2022_jan28_tgt3/scoring_kaldi/best_wer
+        recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
+        recog_text=$decode_dir/scoring_kaldi/$recog_fn
         echo "Copy from $recog_text to $dest_dir/text"
         cp $recog_text $dest_dir/text
     done
