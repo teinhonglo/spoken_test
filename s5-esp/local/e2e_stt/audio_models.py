@@ -62,10 +62,15 @@ class AudioModel(object):
                                              fmax=librosa.note_to_hz('C7'))
         f0_list = np.nan_to_num(f0_list)
         f0_stats = get_stats(f0_list, prefix="f0_")
+        f0_stats["f0_list"] = f0_list.tolist()
+        f0_stats["f0_voiced_probs"] = voiced_probs.tolist()
+        # removed unvoiced frames
         f0_nz_list = f0_list[np.nonzero(f0_list)]
         f0_nz_stats = get_stats(f0_nz_list, prefix="f0_nz_")
+        f0_nz_stats["f0_nz_list"] = f0_nz_list.tolist()
+        f0_stats = merge_dict(f0_stats, f0_nz_stats)
         
-        return [f0_list, f0_stats, f0_nz_list, f0_nz_stats]
+        return [f0_list, f0_stats]
     
     def get_energy(self, speech):
         # alignment (stt)
@@ -73,6 +78,7 @@ class AudioModel(object):
         rms = librosa.feature.rms(S=S)
         rms_list = rms.reshape(rms.shape[1],)
         rms_stats = get_stats(rms_list, prefix="energy_")
+        rms_stats["energy_rms_list"] = rms_list.tolist()
         
         return [rms_list, rms_stats]
     

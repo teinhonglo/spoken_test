@@ -125,10 +125,10 @@ class SpeechModel(object):
         long_sil_list = []
         if len(ctm_info) > 2:
             word, start_time, duration, conf = ctm_info[0]
-            end_time = start_time + duration
+            prev_end_time = start_time + duration
             
             for word, start_time, duration, conf in ctm_info[1:]:
-                interval_word_duration = start_time - end_time
+                interval_word_duration = start_time - prev_end_time
                 
                 if interval_word_duration > self.sil_seconds:
                     sil_list.append(interval_word_duration)
@@ -136,7 +136,7 @@ class SpeechModel(object):
                 if interval_word_duration > self.long_sil_seconds:
                     long_sil_list.append(interval_word_duration)
                 
-                end_time = start_time + duration
+                prev_end_time = start_time + duration
         
         
         sil_stats = get_stats(sil_list, prefix="sil_")

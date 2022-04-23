@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 stage=0
+feats_stage=0
 data_name=spoken_test_2022_jan28
 model_dir=../models/Librispeech-model-mct-tdnnf
 model_name=librispeech_mct_tdnnf_kaldi_tgt3
@@ -32,7 +33,7 @@ fi
 conda activate
 
 if [ $stage -le 0 ]; then
-    ./local/kaldi_stt/extract_feats.sh  --test_sets $data_name \
+    ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name \
                                         --data_root $data_root \
                                         --model_name $model_name --model_dir $model_dir \
                                         --graph_affix $graph_affix

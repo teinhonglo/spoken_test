@@ -76,7 +76,7 @@ for i, uttid in tqdm(enumerate(utt_list)):
     
     response_duration = speech.shape[0] / rate
     # audio feature
-    _, f0_info, _, f0_nz_info = audio_model.get_f0(speech)
+    _, f0_info = audio_model.get_f0(speech)
     _, energy_info = audio_model.get_energy(speech)
     # fluency feature and confidence feature
     speechs = vad_model.get_speech_segments(audio, rate)
@@ -90,7 +90,7 @@ for i, uttid in tqdm(enumerate(utt_list)):
     ctm_info = speech_model.get_ctm(speech, text)
     sil_feats_info = speech_model.sil_feats(ctm_info, response_duration)
     word_feats_info = speech_model.word_feats(ctm_info, response_duration)
-    all_info[uttid] = {"stt": text, "prompt": text_prompt, "wav_path": wav_path, "ctm": ctm_info, "feats": {**f0_info, **f0_nz_info, **energy_info, **sil_feats_info, **word_feats_info}}
+    all_info[uttid] = {"stt": text, "prompt": text_prompt, "wav_path": wav_path, "ctm": ctm_info, "feats": {**f0_info, **energy_info, **sil_feats_info, **word_feats_info}}
 
 print(output_dir)
 with open(output_dir + "/all.json", "w") as fn:
