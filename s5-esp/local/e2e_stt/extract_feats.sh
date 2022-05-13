@@ -11,6 +11,8 @@ stage=0
 
 . ./path.sh
 . ./cmd.sh
+
+echo "$0 $@"
 . parse_options.sh
 
 

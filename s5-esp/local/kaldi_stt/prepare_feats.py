@@ -24,12 +24,17 @@ parser.add_argument("--gop_json_fn",
                     default="gop_result_dir/json/gop.json",
                     type=str)
 
+parser.add_argument("--sample_rate",
+                    default=16000,
+                    type=int)
+
 args = parser.parse_args()
 
 data_dir = args.data_dir
 model_name = args.model_name
 gop_result_dir = args.gop_result_dir
 gop_json_fn = args.gop_json_fn
+sample_rate = args.sample_rate
 
 output_dir = os.path.join(data_dir, model_name)
 
@@ -42,6 +47,9 @@ utt_list = []
 # stt and ctm
 all_info = {}
 recog_dict = {}
+
+speech_model = SpeechModel(recog_dict, gop_result_dir, gop_json_fn)
+audio_model = AudioModel(sample_rate)
 
 with open(data_dir + "/wav.scp", "r") as fn:
     for i, line in enumerate(fn.readlines()):
@@ -61,8 +69,6 @@ with open(output_dir + "/text", "r") as fn:
         info = line.split()
         recog_dict[info[0]] = " ".join(info[1:])
 
-speech_model = SpeechModel(recog_dict, gop_result_dir, gop_json_fn)
-audio_model = AudioModel()
 
 for i, uttid in tqdm(enumerate(utt_list)):
     wav_path = wavscp_dict[uttid]
@@ -70,8 +76,8 @@ for i, uttid in tqdm(enumerate(utt_list)):
     # Confirm the sampling rate is equal to that of the training corpus.
     # If not, you need to resample the audio data before inputting to speech2text
     speech, rate = soundfile.read(wav_path)
-    assert rate == 16000
-    response_duration = speech.shape[0] / rate
+    assert rate == sample_rate
+    total_duration = speech.shape[0] / rate
     # audio feature
     _, f0_info = audio_model.get_f0(speech)
     _, energy_info = audio_model.get_energy(speech)
@@ -79,13 +85,23 @@ for i, uttid in tqdm(enumerate(utt_list)):
     text = speech_model.recog(uttid)
     # alignment (stt)
     ctm_info = speech_model.get_ctm(uttid)
-    sil_feats_info = speech_model.sil_feats(ctm_info, response_duration)
-    word_feats_info = speech_model.word_feats(ctm_info, response_duration)
-    all_info[uttid] = {"stt": text, "prompt": text_prompt, "wav_path": wav_path, "ctm": ctm_info, "feats": {**f0_info, **energy_info, **sil_feats_info, **word_feats_info}}
+    phone_ctm_info, phone_text = speech_model.get_phone_ctm(ctm_info)
+    
+    sil_feats_info, response_duration = speech_model.sil_feats(ctm_info, total_duration)
+    word_feats_info, response_duration = speech_model.word_feats(ctm_info, total_duration)
+    phone_feats_info, response_duration = speech_model.phone_feats(phone_ctm_info, total_duration)
+    
+    all_info[uttid] = { "stt": text, "stt(g2p)": phone_text, "prompt": text_prompt,
+                        "wav_path": wav_path, "ctm": ctm_info, 
+                        "feats": {  **f0_info, **energy_info, 
+                                    **sil_feats_info, **word_feats_info,
+                                    **phone_feats_info,
+                                    "total_duration": total_duration,
+                                    "response_duration": response_duration}}
 
 print(output_dir)
 with open(output_dir + "/all.json", "w") as fn:
-    json.dump(all_info, fn, indent=4)
+    json.dump(all_info, fn, indent=4, ensure_ascii=False)
 
 # write STT Result to file
 with open(output_dir + "/text", "w") as fn:

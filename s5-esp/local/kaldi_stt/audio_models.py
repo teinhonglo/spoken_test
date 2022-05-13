@@ -3,6 +3,7 @@ from scipy.signal import correlate, fftconvolve
 from scipy.interpolate import interp1d
 
 import librosa
+import librosa.display
 
 import os
 import numpy as np
@@ -53,14 +54,16 @@ def get_stats(numeric_list, prefix=""):
     
     
 class AudioModel(object):
-    def __init__(self):
-        pass
+    def __init__(self, sample_rate):
+        self.sample_rate = sample_rate
     
     def get_f0(self, speech):
-        f0_list, voiced_flag, voiced_probs = librosa.pyin(speech,
+        #frame_length=800, win_length=400, hop_length=160, center=False, 
+        f0_org_list, voiced_flag, voiced_probs = librosa.pyin(speech, sr=self.sample_rate,
+                                             frame_length=800, hop_length=160, center=True, 
                                              fmin=librosa.note_to_hz('C2'),
                                              fmax=librosa.note_to_hz('C7'))
-        f0_list = np.nan_to_num(f0_list)
+        f0_list = np.nan_to_num(f0_org_list)
         f0_stats = get_stats(f0_list, prefix="f0_")
         f0_stats["f0_list"] = f0_list.tolist()
         f0_stats["f0_voiced_probs"] = voiced_probs.tolist()
@@ -73,9 +76,7 @@ class AudioModel(object):
         return [f0_list, f0_stats]
     
     def get_energy(self, speech):
-        # alignment (stt)
-        S, phase = librosa.magphase(librosa.stft(speech))
-        rms = librosa.feature.rms(S=S)
+        rms = librosa.feature.rms(y=speech, frame_length=800, hop_length=160, center=True)
         rms_list = rms.reshape(rms.shape[1],)
         rms_stats = get_stats(rms_list, prefix="energy_")
         rms_stats["energy_rms_list"] = rms_list.tolist()
@@ -84,9 +85,39 @@ class AudioModel(object):
     
 if __name__ == "__main__":
     import soundfile
-    wav_path = "data/spoken_test_2022_jan28/wavs/0910102838/0910102838-2-6-2022_1_13.wav"
+    wav_path = "data/spoken_test_2022_jan28/wavs/0988973896/0988973896-3-1-2022_1_12.wav"
     speech, rate = soundfile.read(wav_path)
-    assert rate == 16000
+    #speech, rate = librosa.load(librosa.ex('trumpet'))
     
-    audio_model = AudioModel()
-    _, f0_info, _, f0_nz_info = audio_model.get_f0(speech)
+    audio_model = AudioModel(rate)
+    # f0
+    f0_list, f0_info = audio_model.get_f0(speech)
+    f0 = f0_list
+    times = librosa.times_like(f0_list)
+    print(len(times))
+    import matplotlib.pyplot as plt
+    D = librosa.amplitude_to_db(np.abs(librosa.stft(speech, n_fft=512, win_length=400, hop_length=160, center=True, window='hamming')), ref=np.max)
+    print(D.shape)
+    
+    fig, ax = plt.subplots()
+    img = librosa.display.specshow(D, x_axis='time', y_axis='log', ax=ax)
+    ax.set(title='pYIN fundamental frequency estimation')
+    fig.colorbar(img, ax=ax, format="%+2.f dB")
+    ax.plot(times, f0, label='f0', color='cyan', linewidth=3)
+    ax.legend(loc='upper right')
+    plt.savefig("f0.png")
+    
+    # energy 
+    rms_list, rms_info = audio_model.get_energy(speech)
+    rms = librosa.feature.rms(y=speech, frame_length=800, hop_length=160, center=True)
+    S, phase = librosa.magphase(librosa.stft(speech, n_fft=512, win_length=400, hop_length=160, center=True, window='hamming'))
+    print(rms.shape)
+    fig, ax = plt.subplots(nrows=2, sharex=True)
+    times = librosa.times_like(rms)
+    ax[0].semilogy(times, rms[0], label='RMS Energy')
+    ax[0].set(xticks=[])
+    ax[0].legend()
+    ax[0].label_outer()
+    librosa.display.specshow(librosa.amplitude_to_db(S, ref=np.max), y_axis='log', x_axis='time', ax=ax[1])
+    ax[1].set(title='log Power spectrogram')
+    plt.savefig("rms.png")

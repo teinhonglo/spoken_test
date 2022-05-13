@@ -51,7 +51,7 @@ utt_list = []
 all_info = {}
 
 speech_model = SpeechModel(tag)
-audio_model = AudioModel()
+audio_model = AudioModel(sample_rate)
 vad_model = VadModel(vad_mode, sample_rate)
 
 with open(data_dir + "/wav.scp", "r") as fn:
@@ -72,9 +72,9 @@ for i, uttid in tqdm(enumerate(utt_list)):
     # If not, you need to resample the audio data before inputting to speech2text
     audio, rate = vad_model.read_wave(wav_path)
     speech = np.frombuffer(audio, dtype='int16').astype(np.float32) / 32768.0
-    assert rate == 16000
+    assert rate == sample_rate
     
-    response_duration = speech.shape[0] / rate
+    total_duration = speech.shape[0] / rate
     # audio feature
     _, f0_info = audio_model.get_f0(speech)
     _, energy_info = audio_model.get_energy(speech)
@@ -88,13 +88,23 @@ for i, uttid in tqdm(enumerate(utt_list)):
     text = " ".join(" ".join(text).split())
     # alignment (stt)
     ctm_info = speech_model.get_ctm(speech, text)
-    sil_feats_info = speech_model.sil_feats(ctm_info, response_duration)
-    word_feats_info = speech_model.word_feats(ctm_info, response_duration)
-    all_info[uttid] = {"stt": text, "prompt": text_prompt, "wav_path": wav_path, "ctm": ctm_info, "feats": {**f0_info, **energy_info, **sil_feats_info, **word_feats_info}}
+    phone_ctm_info, phone_text = speech_model.get_phone_ctm(ctm_info)
+    
+    sil_feats_info, response_duration = speech_model.sil_feats(ctm_info, total_duration)
+    word_feats_info, response_duration = speech_model.word_feats(ctm_info, total_duration)
+    phone_feats_info, response_duration = speech_model.phone_feats(phone_ctm_info, total_duration)
+    
+    all_info[uttid] = { "stt": text, "stt(g2p)": phone_text, "prompt": text_prompt,
+                        "wav_path": wav_path, "ctm": ctm_info, 
+                        "feats": {  **f0_info, **energy_info, 
+                                    **sil_feats_info, **word_feats_info,
+                                    **phone_feats_info,
+                                    "total_duration": total_duration,
+                                    "response_duration": response_duration}}
 
 print(output_dir)
 with open(output_dir + "/all.json", "w") as fn:
-    json.dump(all_info, fn, indent=4)
+    json.dump(all_info, fn, indent=4, ensure_ascii=False)
 
 # write STT Result to file
 with open(output_dir + "/text", "w") as fn:

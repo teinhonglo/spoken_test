@@ -4,6 +4,8 @@ import json
 import soundfile
 from collections import defaultdict
 from tqdm import tqdm
+
+
 '''
 import argparse
 parser = argparse.ArgumentParser()
@@ -55,8 +57,9 @@ class SpeechModel(object):
         # Fluency
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
-        self.disflunecy_words = ["AH", "UM", "UH", "EM"]
+        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH"]
         self.special_words = ["<UNK>"]
+        self.g2p = G2p()
     
     # STT features
     def recog(self, uttid):
@@ -66,6 +69,24 @@ class SpeechModel(object):
     def get_ctm(self, uttid):
         ctm_info = self.gop_ctm_info[uttid]
         return ctm_info
+    
+    def get_phone_ctm(self, ctm_info):
+        # use g2p model
+        phone_ctm_info = []
+        phone_text = []
+        
+        for word, start_time, duration, conf in ctm_info:
+            phones = self.g2p(word)
+            duration /= len(phones)
+            
+            for phone in phones:
+                phone_ctm_info.append([phone, start_time, duration, conf])
+                start_time += duration
+                phone_text.append(phone)
+        
+        phone_text = " ".join(phone_text)
+        
+        return phone_ctm_info, phone_text
     
     def get_gop_ctm(self, gop_result_dir, gop_json_fn):
         # confidence (GOP)
@@ -104,11 +125,21 @@ class SpeechModel(object):
         return gop_ctm_info
     
     # Fluency features
-    def sil_feats(self, ctm_info, response_duration):
+    def sil_feats(self, ctm_info, total_duration):
         # > 0.145
         sil_list = []
         # > 0.495
         long_sil_list = []
+        
+        response_duration = total_duration
+        if len(ctm_info) > 0:
+            # response time
+            start_time = ctm_info[0][1]
+            # start_time + duration
+            end_time = ctm_info[-1][1] + ctm_info[-1][2]
+            response_duration = end_time - start_time        
+
+        # word-interval silence
         if len(ctm_info) > 2:
             word, start_time, duration, conf = ctm_info[0]
             prev_end_time = start_time + duration
@@ -151,37 +182,95 @@ class SpeechModel(object):
         
         sil_dict = merge_dict(sil_stats, long_sil_stats)
         
-        return sil_dict
+        return sil_dict, response_duration
     
-    def word_feats(self, ctm_info, response_duration):
+    def word_feats(self, ctm_info, total_duration):
         '''
         TODO:
-        number of repeated words
+        number of repeated words (short pauses)
+        distinct word
+        articulation rate
         '''
-        word_count = len(ctm_info)
+        word_count_dict = defaultdict(int)
         word_duration_list = []
         word_conf_list = []
         num_disfluecy = 0
+        num_repeat = 0
+        prev_words = []
+        
+        response_duration = total_duration
+        if len(ctm_info) > 0:
+            # response time
+            start_time = ctm_info[0][1]
+            # start_time + duration
+            end_time = ctm_info[-1][1] + ctm_info[-1][2]
+            response_duration = end_time - start_time        
         
         for word, start_time, duration, conf in ctm_info:
             word_duration_list.append(duration)
             word_conf_list.append(conf)
+            word_count_dict[word] += 1
+            
             if word in self.disflunecy_words:
                 num_disfluecy += 1
             
+            if word in prev_words:
+                num_repeat += 1
+            
+            prev_words = [word]
+            
         # strat_time and duration of last word
         # word in articlulation time
+        word_count = sum(list(word_count_dict.values()))
+        word_distinct = len(list(word_count_dict.keys()))
         word_freq = word_count / response_duration
         word_duration_stats = get_stats(word_duration_list, prefix = "word_duration_")
         word_conf_stats = get_stats(word_conf_list, prefix="word_conf_")
         
-        word_basic_dict = {   
-                        "word_count": word_count,
-                        "word_freq": word_freq,
-                        "word_num_disfluency": num_disfluecy
-                    }
+        word_basic_dict = { 
+                            "word_count": word_count,
+                            "word_distinct": word_distinct,
+                            "word_freq": word_freq,
+                            "word_num_disfluency": num_disfluecy,
+                            "word_num_repeat": num_repeat
+                          }
+        
         word_stats_dict = merge_dict(word_duration_stats, word_conf_stats)
         word_dict = merge_dict(word_basic_dict, word_stats_dict)
         
-        return word_dict
+        return word_dict, response_duration
      
+    def phone_feats(self, ctm_info, total_duration):
+        phone_count_dict = defaultdict(int)
+        phone_duration_list = []
+        phone_conf_list = []
+         
+        response_duration = total_duration
+        if len(ctm_info) > 0:
+            # response time
+            start_time = ctm_info[0][1]
+            # start_time + duration
+            end_time = ctm_info[-1][1] + ctm_info[-1][2]
+            response_duration = end_time - start_time        
+        
+        for phone, start_time, duration, conf in ctm_info:
+            phone_duration_list.append(duration)
+            phone_conf_list.append(conf)
+            phone_count_dict[phone] += 1  
+            
+        # strat_time and duration of last phone
+        # word in articlulation time
+        phone_count = sum(list(phone_count_dict.values()))
+        phone_freq = phone_count / response_duration
+        phone_duration_stats = get_stats(phone_duration_list, prefix = "phone_duration_")
+        phone_conf_stats = get_stats(phone_conf_list, prefix="phone_conf_")
+        
+        phone_basic_dict = { 
+                            "phone_count": phone_count,
+                            "phone_freq": phone_freq,
+                           }
+        
+        phone_stats_dict = merge_dict(phone_duration_stats, phone_conf_stats)
+        phone_dict = merge_dict(phone_basic_dict, phone_stats_dict)
+        
+        return phone_dict, response_duration

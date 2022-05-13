@@ -4,8 +4,9 @@ stage=0
 test_sets="voice_2022"
 model_dir=../models/Librispeech-model-mct-tdnnf
 model_name=
-graph_affix=tgsmall
+graph_affix=_tgt3
 data_root=data
+replace_text=true
 max_nj=20
 
 . ./cmd.sh
@@ -17,12 +18,12 @@ set -euo pipefail
 model=$model_dir/model
 ivec_extractor=$model_dir/extractor
 ivec_dir=$model_dir/model_online
-lang=$model_dir/data/lang
+lang=$model_dir/data/lang_t3
 mfcc_config=$model_dir/conf/mfcc_hires.conf
 cmvn_config=$model_dir/conf/online_cmvn.conf
 
 if [ -z $graph_affix ]; then
-    graph_affix=_tgsmall
+    graph_affix=_tgt3
 fi
 
 graph_dir=$model_dir/model/graph${graph_affix}
@@ -89,11 +90,13 @@ if [ $stage -le 1 ]; then
         fi
         
         utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
-        best_wer=../models/Librispeech-model-mct-tdnnf/model_online/decode_spoken_test_2022_jan28_tgt3/scoring_kaldi/best_wer
-        recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
-        recog_text=$decode_dir/scoring_kaldi/$recog_fn
-        echo "Copy from $recog_text to $dest_dir/text"
-        cp $recog_text $dest_dir/text
+        if $replace_text; then
+            best_wer=${decode_dir}/scoring_kaldi/best_wer
+            recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
+            recog_text=$decode_dir/scoring_kaldi/$recog_fn
+            echo "Copy from $recog_text to $dest_dir/text"
+            cp $recog_text $dest_dir/text
+        fi
     done
 fi
 
@@ -111,7 +114,7 @@ if [ $stage -le 2 ]; then
         echo "Align $data_dir with $model"
         ivectors_data_dir=$ivec_dir/ivectors_${test_set}
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
-        result_dir=${decode_dir}/align
+        result_dir=${decode_dir}/align_${model_name}
         # steps/chain/align_lats_ctm.sh <data-dir> <lang-dir> <src-dir> <align-dir>
         local/kaldi_stt/align_lats_ctm.sh --cmd "queue.pl" --nj $nspk --online-ivector-dir $ivectors_data_dir --generate_ali_from_lats true $data_dir $lang $model $result_dir
    done
@@ -130,9 +133,9 @@ if [ $stage -le 3 ]; then
         data_dir=$dest_dir
         ivectors_data_dir=$ivec_dir/ivectors_${test_set}
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
-        result_dir=${decode_dir}/gop
+        result_dir=${decode_dir}/gop_${model_name}
+        json_dir=${result_dir}/json_${model_name}
         log_dir=${result_dir}/log
-        json_dir=${result_dir}/json
         
         echo "Computing GOP of $data_dir with $model"
         
@@ -141,6 +144,7 @@ if [ $stage -le 3 ]; then
     done
 fi
 
+eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"
 if [ $stage -le 4 ]; then
     for test_set in $test_sets; do
         
@@ -154,9 +158,9 @@ if [ $stage -le 4 ]; then
         data_dir=$dest_dir
         ivectors_data_dir=$ivec_dir/ivectors_${test_set}
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
-        result_dir=${decode_dir}/gop
+        result_dir=${decode_dir}/gop_${model_name}
+        json_dir=${result_dir}/json_${model_name}
         log_dir=${result_dir}/log
-        json_dir=${result_dir}/json
         text_fn=$dest_dir/text
         mkdir -p $json_dir
         
@@ -177,11 +181,13 @@ if [ $stage -le 5 ]; then
         data_dir=$data_root/$test_set        
         dest_dir=$data_root/$test_set/$model_name
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
-        result_dir=${decode_dir}/gop
-        json_dir=${result_dir}/json
+        result_dir=${decode_dir}/gop_${model_name}
+        json_dir=${result_dir}/json_${model_name}
         
         python local/kaldi_stt/prepare_feats.py --data_dir $data_dir --model_name $model_name --gop_result_dir $result_dir --gop_json_fn $json_dir/gop_scores.json
     done
 fi
+
+conda deactivate
 
 echo "Extracting Done."
