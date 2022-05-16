@@ -77,23 +77,29 @@ with open(args.conf) as f:
 
 gop_parser = GOP(conf)
 gop_dict = {}
-special_tag = "compute-dnn-bi-gop.cc:135"
+special_tag = "compute-dnn-bi-gop.cc:137)"
+
 for log_path in tqdm(fns):
     with open(log_path, "r") as fn:
         for line in fn.readlines():
-            #LOG (compute-dnn-bi-gop[5.5.474~5-72ca1]:main():compute-dnn-bi-gop.cc:135) ADW-HS01803_da3_zi4_ADW GOP message <GOP> t_B SIL_B 13 -11.5933 A:3_E A:3_E 19 0 ts4_S ttss_h4_B 30 -0.721965  <GOP>
+            #LOG (compute-dnn-bi-gop[5.5.474~5-72ca1]:main():compute-dnn-bi-gop.cc:137) ADW-HS01803_da3_zi4_ADW GOP message <GOP> t_B SIL_B 13 -11.5933 A:3_E A:3_E 19 0 ts4_S ttss_h4_B 30 -0.721965  <GOP>
             if special_tag in line:
-                info = line.split(special_tag)[1].split()[1:]
+                info = line.split(special_tag)[1].split()
                 utt_id = info[0]
-                
+                gop_msg = " ".join(info[1:])
+                 
                 if utt_id not in text_dict:
                     continue
                 
                 prompt = text_dict[utt_id]
                 # process GOP
-                final_msg = " ".join(info[3:]).split("<GOP>")[1]
+                final_msg = gop_msg.split("<GOP>")[1]
                 gop_parser.set_prompt(prompt)
-                gop_word_dict = gop_parser.process_GOP(final_msg)
+                try:
+                    gop_word_dict = gop_parser.process_GOP(final_msg)
+                except:
+                    print(utt_id, prompt)
+                    
                 gop_dict[utt_id] = gop_word_dict
 
 with open(args.json_dir + "/gop_scores.json", "w") as fn:

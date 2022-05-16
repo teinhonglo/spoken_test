@@ -159,12 +159,13 @@ if [ $stage -le 4 ]; then
         ivectors_data_dir=$ivec_dir/ivectors_${test_set}
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         result_dir=${decode_dir}/gop_${model_name}
-        json_dir=${result_dir}/json_${model_name}
+        json_dir=${result_dir}/json
         log_dir=${result_dir}/log
         text_fn=$dest_dir/text
         mkdir -p $json_dir
         
         echo "Processing GOP result of $data_dir with $model"
+        echo "python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/sample_worker_en.yaml"
          
         python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/sample_worker_en.yaml
     done
@@ -182,7 +183,7 @@ if [ $stage -le 5 ]; then
         dest_dir=$data_root/$test_set/$model_name
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         result_dir=${decode_dir}/gop_${model_name}
-        json_dir=${result_dir}/json_${model_name}
+        json_dir=${result_dir}/json
         
         python local/kaldi_stt/prepare_feats.py --data_dir $data_dir --model_name $model_name --gop_result_dir $result_dir --gop_json_fn $json_dir/gop_scores.json
     done

@@ -4,6 +4,7 @@ import json
 import soundfile
 from collections import defaultdict
 from tqdm import tqdm
+from g2p_en import G2p
 
 
 '''

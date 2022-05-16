@@ -79,13 +79,7 @@ class GOP(object):
                 gop_score = self.sigmoid(float(gop_list[j+3])) * 200
                 if is_silence:
                     gop_score = gop_score * 0.2
-                
-                '''
-                gop_score = float(gop_list[j+3])
-                if is_silence:
-                    gop_score -= 10
-                '''
-                
+                 
                 phone_list.append([phone, gop_score])
                 gop_summation += gop_score
                 # 1. Stress
