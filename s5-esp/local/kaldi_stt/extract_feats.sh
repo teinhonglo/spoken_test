@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 stage=0
+stop_stage=10000
 test_sets="voice_2022"
 model_dir=../models/Librispeech-model-mct-tdnnf
 model_name=
@@ -11,6 +12,8 @@ max_nj=20
 
 . ./cmd.sh
 . ./path.sh
+
+echo "$0 $@"
 . parse_options.sh
 
 set -euo pipefail
@@ -18,7 +21,7 @@ set -euo pipefail
 model=$model_dir/model
 ivec_extractor=$model_dir/extractor
 ivec_dir=$model_dir/model_online
-lang=$model_dir/data/lang_t3
+lang=$model_dir/data/lang
 mfcc_config=$model_dir/conf/mfcc_hires.conf
 cmvn_config=$model_dir/conf/online_cmvn.conf
 
@@ -28,7 +31,7 @@ fi
 
 graph_dir=$model_dir/model/graph${graph_affix}
 
-if [ $stage -le -2 ]; then    
+if [ $stage -le -2 ] && [ $stop_stage -ge -2 ] ; then    
     for test_set in $test_sets; do 
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
         if [ $nspk -ge $max_nj ]; then
@@ -43,7 +46,7 @@ if [ $stage -le -2 ]; then
     done
 fi
 
-if [ $stage -le -1 ]; then
+if [ $stage -le -1 ] && [ $stop_stage -ge -1 ] ; then    
     for test_set in $test_sets; do
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
         if [ $nspk -ge $max_nj ]; then
@@ -55,7 +58,7 @@ if [ $stage -le -1 ]; then
    done
 fi
 
-if [ $stage -le 0 ]; then
+if [ $stage -le 0 ] && [ $stop_stage -ge 0 ] ; then    
     # note: if the features change (e.g. you add pitch features), you will have to
     # change the options of the following command line.
     if [ ! -d ${model}_online ]; then
@@ -66,8 +69,8 @@ if [ $stage -le 0 ]; then
     fi
 
     for test_set in $test_sets; do
-        nspk=$(wc -l <data/${test_set}/spk2utt)
-        # note: we just give it "data/${test_set}" as it only uses the wav.scp, the
+        nspk=$(wc -l <$data_root/${test_set}/spk2utt)
+        # note: we just give it "$data_rott/${test_set}" as it only uses the wav.scp, the
         # feature type does not matter.
         if [ $nspk -gt $max_nj ]; then
             nspk=$max_nj
@@ -81,7 +84,7 @@ if [ $stage -le 0 ]; then
     done
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 1 ] && [ $stop_stage -ge 1 ] ; then    
     for test_set in $test_sets; do
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         dest_dir=$data_root/$test_set/$model_name
@@ -100,7 +103,7 @@ if [ $stage -le 1 ]; then
     done
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then    
     for test_set in $test_sets; do
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
         
@@ -120,7 +123,7 @@ if [ $stage -le 2 ]; then
    done
 fi
 
-if [ $stage -le 3 ]; then
+if [ $stage -le 3 ] && [ $stop_stage -ge 3 ] ; then    
     for test_set in $test_sets; do
         
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
@@ -145,7 +148,7 @@ if [ $stage -le 3 ]; then
 fi
 
 eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"
-if [ $stage -le 4 ]; then
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ] ; then    
     for test_set in $test_sets; do
         
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
@@ -171,7 +174,7 @@ if [ $stage -le 4 ]; then
     done
 fi
 
-if [ $stage -le 5 ]; then
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ] ; then    
     for test_set in $test_sets; do
         nspk=$(wc -l <$data_root/$test_set/spk2utt)
         

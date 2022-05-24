@@ -6,6 +6,7 @@ data_name=spoken_test_2022_jan28
 model_name=gigaspeech
 model_tag="Shinji Watanabe/gigaspeech_asr_train_asr_raw_en_bpe5000_valid.acc.ave"
 replace_text=false
+use_streaming=false
 vad_mode=0
 data_root=data
 
@@ -35,7 +36,7 @@ conda activate
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name \
                                     --model_name $model_name --model_tag "$model_tag" \
-                                    --vad_mode $vad_mode
+                                    --vad_mode $vad_mode --use_streaming $use_streaming
     
     dest_dir=$data_root/$data_name/$model_name
     
