@@ -9,7 +9,7 @@ ln -s $ESPNET_ROOT/tools/kaldi/egs/wsj/s5/steps
 ln -s $ESPNET_ROOT/tools/kaldi/egs/wsj/s5/utils
 cd -
 
-cd s5-esp
+cd s5-kaldi
 nano path.sh
 # 把$KLADI_ROOT修改成$KALDI_ROOT的路徑
 ln -s $KALDI_ROOT/egs/wsj/s5/steps
