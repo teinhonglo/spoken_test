@@ -35,7 +35,7 @@ cd s5-kaldi
 local/prep/prepare_data_kaldi.sh --stage -2 --stop-stage -1
 ```
 
-# 2. Feature extration
+# 2. Feature extraction
 
 ### 2-1. espnet
 ```
