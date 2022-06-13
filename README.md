@@ -60,5 +60,5 @@ python local/stats_models/multivar_linear_regression.py
 ```
 https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/prep/prepare_data.sh#L28
 https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/prep/prepare_data_kaldi.sh#L29
-https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/prep/prepare_data_kaldi.sh#L29
+https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/kaldi_stt/extract_feats.sh#L150
 ```
