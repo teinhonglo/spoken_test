@@ -11,9 +11,9 @@ cd -
 
 cd s5-kaldi
 nano path.sh
-# 把$KLADI_ROOT修改成$KALDI_ROOT的路徑
-ln -s $KALDI_ROOT/egs/wsj/s5/steps
-ln -s $KALDI_ROOT/egs/wsj/s5/utils
+# 把$KALDI_ROOT修改成自己$KALDI_ROOT的路徑
+rm steps && ln -s $KALDI_ROOT/egs/wsj/s5/steps
+rm utils && ln -s $KALDI_ROOT/egs/wsj/s5/utils
 cd -
 ```
 
