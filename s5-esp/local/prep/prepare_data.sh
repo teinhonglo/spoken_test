@@ -7,8 +7,10 @@ model_name=gigaspeech
 model_tag="Shinji Watanabe/gigaspeech_asr_train_asr_raw_en_bpe5000_valid.acc.ave"
 replace_text=false
 use_streaming=false
-vad_mode=0
 data_root=data
+# vad parameters
+vad_mode=0
+max_segment_length=15
 
 . ./cmd.sh
 . ./path.sh
@@ -36,7 +38,7 @@ conda activate
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name \
                                     --model_name $model_name --model_tag "$model_tag" \
-                                    --vad_mode $vad_mode --use_streaming $use_streaming
+                                    --vad_mode $vad_mode --max_segment_length $max_segment_length --use_streaming $use_streaming
     
     dest_dir=$data_root/$data_name/$model_name
     

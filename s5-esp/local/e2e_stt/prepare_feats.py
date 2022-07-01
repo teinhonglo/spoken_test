@@ -28,6 +28,10 @@ parser.add_argument("--sample_rate",
 
 parser.add_argument("--vad_mode",
                     default=1,
+                    type=int)
+
+parser.add_argument("--max_segment_length",
+                    default=15,
                     type=int)                    
 
 args = parser.parse_args()
@@ -37,6 +41,7 @@ model_name = args.model_name
 model_tag = args.model_tag
 sample_rate = args.sample_rate
 vad_mode = args.vad_mode
+max_segment_length = args.max_segment_length
 
 output_dir = os.path.join(data_dir, model_name)
 
@@ -52,7 +57,7 @@ all_info = {}
 
 speech_model = SpeechModel(tag)
 audio_model = AudioModel(sample_rate)
-vad_model = VadModel(vad_mode, sample_rate)
+vad_model = VadModel(mode=vad_mode, sample_rate=sample_rate, max_segment_length=max_segment_length)
 
 with open(data_dir + "/wav.scp", "r") as fn:
     for i, line in enumerate(fn.readlines()):
@@ -94,7 +99,7 @@ for i, uttid in tqdm(enumerate(utt_list)):
     word_feats_info, response_duration = speech_model.word_feats(ctm_info, total_duration)
     phone_feats_info, response_duration = speech_model.phone_feats(phone_ctm_info, total_duration)
     
-    all_info[uttid] = { "stt": text, "stt(g2p)": phone_text, "prompt": text_prompt,
+    all_info[uttid] = { "stt": text, "prompt": text_prompt,
                         "wav_path": wav_path, "ctm": ctm_info, 
                         "feats": {  **f0_info, **energy_info, 
                                     **sil_feats_info, **word_feats_info,
