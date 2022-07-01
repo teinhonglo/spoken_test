@@ -84,15 +84,15 @@ for i, uttid in tqdm(enumerate(utt_list)):
     # fluency feature and confidence feature
     text = speech_model.recog(uttid)
     # alignment (stt)
-    ctm_info = speech_model.get_ctm(uttid)
-    phone_ctm_info, phone_text = speech_model.get_phone_ctm(ctm_info)
+    word_ctm_info, phn_ctm_info = speech_model.get_ctm(uttid)
+    #phone_ctm_info, phone_text = speech_model.get_phone_ctm(ctm_info)
     
-    sil_feats_info, response_duration = speech_model.sil_feats(ctm_info, total_duration)
-    word_feats_info, response_duration = speech_model.word_feats(ctm_info, total_duration)
-    phone_feats_info, response_duration = speech_model.phone_feats(phone_ctm_info, total_duration)
+    sil_feats_info, response_duration = speech_model.sil_feats(word_ctm_info, total_duration)
+    word_feats_info, response_duration = speech_model.word_feats(word_ctm_info, total_duration)
+    phone_feats_info, response_duration = speech_model.phone_feats(phn_ctm_info, total_duration)
     
-    all_info[uttid] = { "stt": text, "stt(g2p)": phone_text, "prompt": text_prompt,
-                        "wav_path": wav_path, "ctm": ctm_info, 
+    all_info[uttid] = { "stt": text, "prompt": text_prompt,
+                        "wav_path": wav_path, "ctm": word_ctm_info, 
                         "feats": {  **f0_info, **energy_info, 
                                     **sil_feats_info, **word_feats_info,
                                     **phone_feats_info,

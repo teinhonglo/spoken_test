@@ -54,7 +54,7 @@ class SpeechModel(object):
     def __init__(self, recog_dict, gop_result_dir, gop_json_fn):
         # STT
         self.recog_dict = recog_dict
-        self.gop_ctm_info = self.get_gop_ctm(gop_result_dir, gop_json_fn)
+        self.gop_word_ctm_info, self.gop_phn_ctm_info = self.get_gop_ctm(gop_result_dir, gop_json_fn)
         # Fluency
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
@@ -68,8 +68,9 @@ class SpeechModel(object):
         return text
     
     def get_ctm(self, uttid):
-        ctm_info = self.gop_ctm_info[uttid]
-        return ctm_info
+        word_ctm_info = self.gop_word_ctm_info[uttid]
+        phn_ctm_info = self.gop_phn_ctm_info[uttid]
+        return word_ctm_info, phn_ctm_info
     
     def get_phone_ctm(self, ctm_info):
         # use g2p model
@@ -94,9 +95,19 @@ class SpeechModel(object):
         with open(gop_json_fn, "r") as fn:
             gop_json = json.load(fn)
         
-        gop_ctm_info = defaultdict(list)
+        gop_word_ctm_info = defaultdict(list)
+        gop_phone_ctm_info = defaultdict(list)
         
         # word-level ctm
+        words_gop_json_dict = {}
+        for uttid, gop_data in gop_json.items():
+            word_list = []
+            for word_info in gop_data.get('GOP'):
+                word = word_info[0]
+                word_gop_score = word_info[1][-1][-1] # get average only - word-level gop score
+                word_list.append([word, word_gop_score])
+            words_gop_json_dict.setdefault(uttid, []).extend(word_list)
+
         with open(os.path.join(gop_result_dir, "word.ctm")) as wctm_fn:
             count = 0
             prev_uttid = None
@@ -104,12 +115,11 @@ class SpeechModel(object):
                 uttid, _, start_time, duration, word_id = line.split()
                 if prev_uttid != uttid:
                     count = 0
-                # NOTE: 
-                word_gop_id, word_gop_info = gop_json[uttid]["GOP"][count]
-                word_gop = word_gop_info[-1][-1]
+                # NOTE: we use the average value of phoneme-level gop score as the word-level gop score
+                word_gop_id, word_gop = words_gop_json_dict[uttid][count]
                 
-                assert word_id == word_gop_id
-                
+                assert word_gop_id == word_id
+
                 start_time = round(float(start_time), 4)
                 duration = round(float(duration), 4)
                 conf = round(float(word_gop) / 100, 4)
@@ -119,11 +129,50 @@ class SpeechModel(object):
                 if conf < 0.0:
                     conf = 0.0
                 
-                gop_ctm_info[uttid].append([word_id, start_time, duration, conf])
+                gop_word_ctm_info[uttid].append([word_id, start_time, duration, conf])
                 count += 1
                 prev_uttid = uttid
         
-        return gop_ctm_info
+        # phoneme-level ctm
+        phns_gop_json_dict = {}
+        for uttid, gop_data in gop_json.items():
+            phn_list = []
+            for word_info in gop_data.get('GOP'):
+                word = word_info[0]
+                phn_gop_info = word_info[1][:-1] # remove word-level gop scores
+                phns_gop_json_dict.setdefault(uttid, []).extend(phn_gop_info)
+
+        with open(os.path.join(gop_result_dir, "phone.ctm")) as pctm_fn:
+            count = 0
+            prev_uttid = None
+            for line in pctm_fn.readlines():
+
+                uttid, _, start_time, duration, phn_id = line.split()
+                if prev_uttid != uttid:
+                    count = 0
+                
+                # BUG: the alignment result has 'SIL' tokens, just ignore it
+                if phn_id.lower() == 'sil':
+                    continue
+
+                phn_gop_id, phn_gop = phns_gop_json_dict[uttid][count]
+                
+                assert phn_id == phn_gop_id
+                
+                start_time = round(float(start_time), 4)
+                duration = round(float(duration), 4)
+                conf = round(float(phn_gop) / 100, 4)
+                
+                if conf > 1.0:
+                    conf = 1.0
+                if conf < 0.0:
+                    conf = 0.0
+                
+                gop_phone_ctm_info[uttid].append([phn_id, start_time, duration, conf])
+                count += 1
+                prev_uttid = uttid
+
+        return gop_word_ctm_info, gop_phone_ctm_info
     
     # Fluency features
     def sil_feats(self, ctm_info, total_duration):

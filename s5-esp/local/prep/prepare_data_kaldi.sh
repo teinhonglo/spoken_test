@@ -40,6 +40,7 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
                                         --data_root $data_root \
                                         --model_name $model_name --model_dir $model_dir \
                                         --graph_affix $graph_affix
+    
     dest_dir=$data_root/$data_name/$model_name
     
     if [ $replace_text == "true" ]; then
