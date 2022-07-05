@@ -46,7 +46,7 @@ local/prep/prepare_data.sh --data_name data/spoken_test_2022_jan28
 ### 2-1. kaldi (alternative)
 ```
 cd s5-kaldi
-local/prep/prepare_data_kaldi.sh --feat-stage -2 --data_name data/spoken_test_2022_jan28
+local/prep/prepare_data_kaldi.sh --data_name data/spoken_test_2022_jan28
 ```
 
 # 3. Grader
