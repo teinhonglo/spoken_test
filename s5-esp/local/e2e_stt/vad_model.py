@@ -25,7 +25,7 @@ class Frame(object):
         self.duration = duration
 
 class VadModel(object):
-    def __init__(self, mode=1, sample_rate=16000, frame_duration_ms=30):
+    def __init__(self, mode=1, sample_rate=16000, frame_duration_ms=30, max_segment_length=15):
         '''
         Integer in {0,1,2,3} specifying the VAD aggressiveness.
         0 is the least aggressive
@@ -38,6 +38,7 @@ class VadModel(object):
         self.vad = webrtcvad.Vad(self.mode)
         self.sample_rate = sample_rate
         self.frame_duration_ms = frame_duration_ms
+        self.max_segment_length = max_segment_length # seconds
         
     def read_wave(self, path):
         """Reads a .wav file.
@@ -122,8 +123,9 @@ class VadModel(object):
                 # If more than 90% of the frames in the ring buffer are
                 # unvoiced, then enter NOTTRIGGERED and yield whatever
                 # audio we've collected.
-                if num_unvoiced > 0.9 * ring_buffer.maxlen:
-                    end_time = frame.timestamp + frame.duration
+                end_time = frame.timestamp + frame.duration
+                
+                if num_unvoiced > 0.9 * ring_buffer.maxlen or (end_time - start_time) >= self.max_segment_length:
                     triggered = False
                     ring_buffer.clear()
                     voiced_frames = []

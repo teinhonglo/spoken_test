@@ -54,7 +54,6 @@ def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
     
     print("="*10, "Coefficient", "=" * 10)
     print("MSE", mean_squared_error(y_test, y_pred))
-    print("RMSE", mean_squared_error(y_test, y_pred, squared=False))
     print("Pearson")
     df = pd.DataFrame({"anno": y_test,
                        "pred": y_pred})
@@ -117,7 +116,7 @@ y = np.array(y)
 spk_list = np.array(spk_list)
 
 m = len(y) # Number of training examples
-b1_bins = np.array([4.0, 5.0])
+b1_bins = np.array([1.0, 4.0, 5.0])
 all_bins = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
 kf = KFold(n_splits=5, random_state=66, shuffle=True)
 
