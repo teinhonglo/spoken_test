@@ -56,7 +56,8 @@ python local/stats_models/multivar_linear_regression.py
 ```
 
 # 4. Notes
-### 修改成自己conda的啟動方式
+### 修改成自己conda的啟動方式:
+### 可以1)直接刪掉，在執行script前先啟動或2)替換成自己的conda並搭配conda activte $env_name
 ```
 https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/prep/prepare_data.sh#L28
 https://github.com/teinhonglo/dhe_spoken_test/blob/main/s5-esp/local/prep/prepare_data_kaldi.sh#L29
