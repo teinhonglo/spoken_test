@@ -4,14 +4,14 @@
 ```
 cd s5-esp
 nano path.sh
-# 把$MAIN_ROOT修改成$ESPNET_ROOT的路徑
+# 把$MAIN_ROOT修改成espnet的路徑
 ln -s $ESPNET_ROOT/tools/kaldi/egs/wsj/s5/steps
 ln -s $ESPNET_ROOT/tools/kaldi/egs/wsj/s5/utils
 cd -
 
 cd s5-kaldi
 nano path.sh
-# 把$KLADI_ROOT修改成$KALDI_ROOT的路徑
+# 把$KLADI_ROOT修改成kaldi的路徑
 ln -s $KALDI_ROOT/egs/wsj/s5/steps
 ln -s $KALDI_ROOT/egs/wsj/s5/utils
 cd -
