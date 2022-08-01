@@ -12,5 +12,5 @@
 
 export train_cmd="retry.pl queue.pl --mem 2G --num-threads 1"
 export cuda_cmd="run.pl --mem 4G"
-export decode_cmd="queue.pl --mem 4G"
+export decode_cmd="queue.pl --mem 4G --num-threads 8"
 export mkgraph_cmd="queue.pl --mem 8G"

@@ -3,7 +3,7 @@
 stage=0
 stop_stage=10000
 feats_stage=0
-feats_stop_stage=0
+feats_stop_stage=10000
 data_name=spoken_test_2022_jan28
 model_dir=../models/Librispeech-model-mct-tdnnf
 model_name=librispeech_mct_tdnnf_kaldi_tgt3
@@ -26,13 +26,9 @@ if [ $stage -le -2 ] && [ $stop_stage -ge -2 ]; then
     ./local/prep/create_decode_data.sh --data_root $data_root --test_sets "$data_name"
 fi
 
-eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"
-
 if [ $stage -le -1 ] && [ $stop_stage -ge -1 ]; then
     python local/prep/repair_and_resample.py --data_dir $data_root/$data_name
 fi
-
-conda activate
 
 if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
     ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name \

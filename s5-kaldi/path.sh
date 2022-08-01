@@ -5,3 +5,4 @@ export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/src/gopbin:$PW
 . $KALDI_ROOT/tools/config/common_path.sh
 export LC_ALL=C
 export PYTHONDONTWRITEBYTECODE=1
+eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"

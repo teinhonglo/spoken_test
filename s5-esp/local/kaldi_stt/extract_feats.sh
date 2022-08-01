@@ -147,7 +147,6 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ] ; then
     done
 fi
 
-eval "$(/share/homes/teinhonglo/anaconda3/bin/conda shell.bash hook)"
 if [ $stage -le 4 ] && [ $stop_stage -ge 4 ] ; then    
     for test_set in $test_sets; do
         
@@ -192,6 +191,5 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ] ; then
     done
 fi
 
-conda deactivate
 
 echo "Extracting Done."

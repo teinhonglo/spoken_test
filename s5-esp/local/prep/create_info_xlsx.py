@@ -37,6 +37,10 @@ for uttid, wav_path in wavscp_dict.items():
     dir_name = os.path.dirname(wav_path)
     w_dir_name = "/".join(dir_name.split("/")[2:])
     phoneNo = dir_name.split("/")[3]
+    
+    if phoneNo in csv_info["phone"]:
+        continue
+    
     csv_info["phone"].append(phoneNo)
     num_egs = len(csv_info["phone"])
     # readme.txt
