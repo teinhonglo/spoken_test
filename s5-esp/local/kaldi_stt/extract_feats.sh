@@ -167,9 +167,9 @@ if [ $stage -le 4 ] && [ $stop_stage -ge 4 ] ; then
         mkdir -p $json_dir
         
         echo "Processing GOP result of $data_dir with $model"
-        echo "python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/sample_worker_en.yaml"
+        echo "python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/conf/sample_worker_en.yaml"
          
-        python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/sample_worker_en.yaml
+        python local/gop/gop_log_parser.py --log_dir $log_dir --json_dir $json_dir --words_fn $lang/words.txt --text_fn $text_fn --conf $model_dir/conf/sample_worker_en.yaml
     done
 fi
 

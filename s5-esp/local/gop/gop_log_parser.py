@@ -87,7 +87,7 @@ for log_path in tqdm(fns):
                 info = line.split(special_tag)[1].split()
                 utt_id = info[0]
                 gop_msg = " ".join(info[1:])
-                 
+                
                 if utt_id not in text_dict:
                     continue
                 
@@ -97,10 +97,10 @@ for log_path in tqdm(fns):
                 gop_parser.set_prompt(prompt)
                 try:
                     gop_word_dict = gop_parser.process_GOP(final_msg)
+                    gop_dict[utt_id] = gop_word_dict
                 except:
                     print(utt_id, prompt)
                     
-                gop_dict[utt_id] = gop_word_dict
 
 with open(args.json_dir + "/gop_scores.json", "w") as fn:
     json.dump(gop_dict, fn, indent=4)

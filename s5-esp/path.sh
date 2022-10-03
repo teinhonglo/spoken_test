@@ -1,4 +1,4 @@
-MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-s3prl
+MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-cu11
 KALDI_ROOT=$MAIN_ROOT/tools/kaldi
 
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PATH

@@ -7,7 +7,7 @@ dest_dir=spoken_test_2022_mar18/gigaspeech
 
 . ./cmd.sh
 . ./path.sh
-. parse_options.sh
+. utils/parse_options.sh
 
 # create info.xlsx trans.xlsx
 
