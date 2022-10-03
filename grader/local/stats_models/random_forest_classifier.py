@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn import linear_model
+from sklearn.ensemble import RandomForestClassifier
 import os
 from tqdm import tqdm
 from sklearn.model_selection import KFold
@@ -13,6 +13,7 @@ import logging
 import matplotlib.pyplot as plt
 
 import argparse
+from sklearn import tree
 
 parser = argparse.ArgumentParser()
 
@@ -98,11 +99,9 @@ def feature_selection(X, y, bins):
     y_cefr = np.digitize(np.array(y), bins)
     basic_clf = ExtraTreesClassifier(n_estimators=50, random_state=66)
     basic_clf = basic_clf.fit(X, y_cefr)
-    importances = basic_clf.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in basic_clf.estimators_], axis=0)
     selector = SelectFromModel(basic_clf, prefit=True)
     
-    return selector, importances, std
+    return selector
 
 # label
 with open(os.path.join(data_dir, label_fn), "r") as fn:
@@ -141,8 +140,8 @@ acc = 0
 infos = ["spk_id", "anno", "anno(cefr)", "pred", "pred(cefr)", "results"]
 kfold_info = {"Fold" + str(1+i):{info:[] for info in infos} for i in range(5)}
 report_titles = ["fold", "acc", "macro_precision", "macro_recall", "macro_f1-score", "weighted_precision", "weighted_recall", "weighted_f1-score"]
-report_feats = {"importances":[], "std":[], "feat_keys":[]}
 report_dict = {rt: [] for rt in report_titles}
+clfs = []
 
 # TRAINING (K-FOLD)
 for i, (train_index, test_index) in enumerate(kf.split(X)):
@@ -150,28 +149,20 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
-    selector, importances, std = feature_selection(X_train, y_train, b1_bins)
+    selector = feature_selection(X_train, y_train, b1_bins)
     select_support = selector.get_support() * 1
     select_feat_keys = feat_keys[np.nonzero(select_support)]
     print(select_feat_keys)
     
-    plt_importances, plt_std, plt_feat_keys = importances[np.nonzero(select_support)], std[np.nonzero(select_support)], feat_keys[np.nonzero(select_support)]
-    report_feats["importances"].append(plt_importances)
-    report_feats["std"].append(plt_std)
-    report_feats["feat_keys"].append(plt_feat_keys)
-    
     X_train = selector.transform(X_train)
     X_test = selector.transform(X_test)
     
-    clf = linear_model.Lasso(alpha=0.1)
-    clf.fit(X_train, y_train)
-    
-    coef_ = clf.coef_[np.nonzero(clf.coef_)]
-    feat_nz_keys = select_feat_keys[np.nonzero(clf.coef_)]
+    clf = RandomForestClassifier()
+    clf.fit(X_train, y_train.astype('int'))
+    clfs.append(clf)
     
     print("=" * 10, "Feature Importance", "=" * 10)
-    print(feat_nz_keys[np.argsort(-1 * coef_)])
-    print(coef_[np.argsort(-1 * coef_)])
+    print(clf.feature_importances_)
     
     y_pred = clf.predict(X_test) 
     fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], b1_bins, kfold_info, "Fold" + str(i+1))
@@ -190,6 +181,7 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
 
+
 with pd.ExcelWriter(os.path.join(exp_dir, "kfold_detail.xlsx")) as writer:
     for f in list(kfold_info.keys()):
         df = pd.DataFrame(kfold_info[f])
@@ -199,13 +191,4 @@ report_df = pd.DataFrame.from_dict(report_dict)
 report_df.to_excel(os.path.join(exp_dir, "metric_report.xlsx"), columns=report_titles, index=False)
 
 # visualization
-for i in range(len(report_feats["importances"])):
-    plt_importances, plt_std, plt_feat_keys = report_feats["importances"][i], report_feats["std"][i], report_feats["feat_keys"][i]
-    forest_importances = pd.Series(plt_importances, index=plt_feat_keys).sort_values(ascending=False)
-    fig, ax = plt.subplots()
-    #forest_importances.plot.bar(yerr=plt_std, ax=ax)
-    forest_importances.plot.bar(ax=ax)
-    ax.set_title("Feature importances using MDI")
-    ax.set_ylabel("Mean decrease in impurity (MDI)")
-    fig.tight_layout()
-    fig.savefig(os.path.join(exp_dir, "feats-importances_" + str(i+1)+"-fold.png"), dpi=600)
+

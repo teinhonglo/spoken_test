@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn import linear_model
+from sklearn.neural_network import MLPClassifier
 import os
 from tqdm import tqdm
 from sklearn.model_selection import KFold
@@ -13,6 +13,7 @@ import logging
 import matplotlib.pyplot as plt
 
 import argparse
+from sklearn import tree
 
 parser = argparse.ArgumentParser()
 
@@ -53,10 +54,16 @@ if not os.path.exists(exp_dir):
 spk2label = {}
 spk2feats = {}
 
-def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
+def report(y_test, y_pred, spk_list, bins=None, kfold_info=None, fold="Fold1"):
     print("=" * 10, "Raw data", "=" * 10)
-    y_test_cefr = np.digitize(np.array(y_test), bins)
-    y_pred_cefr = np.digitize(np.array(np.round_(y_pred * 2) / 2), bins)
+    
+    if bins is not None:
+        y_test_cefr = np.digitize(np.array(y_test), bins)
+        y_pred_cefr = np.digitize(np.array(np.round_(y_pred * 2) / 2), bins)
+    else:
+        y_test_cefr = y_test
+        y_pred_cefr = y_pred
+    
     print("spk_list, y_test, y_test_cefr, y_pred, y_pred_cefr")
     for i in range(len(spk_list)):
         print(spk_list[i], y_test[i], y_test_cefr[i], y_pred[i], y_pred_cefr[i])
@@ -91,18 +98,20 @@ def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
     return acc, macro_avg, weighted_avg, kfold_info
 
 # Feature selection
-def feature_selection(X, y, bins):
+def feature_selection(X, y, bins=None):
     from sklearn.ensemble import ExtraTreesClassifier
     from sklearn.feature_selection import SelectFromModel
     # https://scikit-learn.org/stable/modules/feature_selection.html
-    y_cefr = np.digitize(np.array(y), bins)
+    if bins is not None:
+        y_cefr = np.digitize(np.array(y), bins)
+    else:
+        y_cefr = y
+    
     basic_clf = ExtraTreesClassifier(n_estimators=50, random_state=66)
     basic_clf = basic_clf.fit(X, y_cefr)
-    importances = basic_clf.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in basic_clf.estimators_], axis=0)
     selector = SelectFromModel(basic_clf, prefit=True)
     
-    return selector, importances, std
+    return selector
 
 # label
 with open(os.path.join(data_dir, label_fn), "r") as fn:
@@ -121,6 +130,7 @@ for i, spk in enumerate(feats_df["spkID"]):
     feats_vec = [float(feats_df[fk][i]) for fk in feat_keys]
     spk2feats[spk] = feats_vec
 
+
 # create example
 X, y, spk_list = [], [], []
 for spk in list(spk2label.keys()):
@@ -135,14 +145,17 @@ spk_list = np.array(spk_list)
 m = len(y) # Number of training examples
 b1_bins = np.array([1.0, 4.0, 5.0])
 all_bins = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-kf = KFold(n_splits=5, random_state=66, shuffle=True)
+random_state=66
+num_layers=1
+num_epochs=10
+kf = KFold(n_splits=5, random_state=random_state, shuffle=True)
 
 acc = 0
 infos = ["spk_id", "anno", "anno(cefr)", "pred", "pred(cefr)", "results"]
 kfold_info = {"Fold" + str(1+i):{info:[] for info in infos} for i in range(5)}
 report_titles = ["fold", "acc", "macro_precision", "macro_recall", "macro_f1-score", "weighted_precision", "weighted_recall", "weighted_f1-score"]
-report_feats = {"importances":[], "std":[], "feat_keys":[]}
 report_dict = {rt: [] for rt in report_titles}
+clfs = []
 
 # TRAINING (K-FOLD)
 for i, (train_index, test_index) in enumerate(kf.split(X)):
@@ -150,29 +163,21 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
-    selector, importances, std = feature_selection(X_train, y_train, b1_bins)
+    y_train = np.digitize(np.array(y_train), b1_bins)
+    y_test = np.digitize(np.array(y_test), b1_bins)
+    
+    selector = feature_selection(X_train, y_train, b1_bins)
     select_support = selector.get_support() * 1
     select_feat_keys = feat_keys[np.nonzero(select_support)]
     print(select_feat_keys)
     
-    plt_importances, plt_std, plt_feat_keys = importances[np.nonzero(select_support)], std[np.nonzero(select_support)], feat_keys[np.nonzero(select_support)]
-    report_feats["importances"].append(plt_importances)
-    report_feats["std"].append(plt_std)
-    report_feats["feat_keys"].append(plt_feat_keys)
-    
     X_train = selector.transform(X_train)
     X_test = selector.transform(X_test)
     
-    clf = linear_model.Lasso(alpha=0.1)
-    clf.fit(X_train, y_train)
-    
-    coef_ = clf.coef_[np.nonzero(clf.coef_)]
-    feat_nz_keys = select_feat_keys[np.nonzero(clf.coef_)]
-    
-    print("=" * 10, "Feature Importance", "=" * 10)
-    print(feat_nz_keys[np.argsort(-1 * coef_)])
-    print(coef_[np.argsort(-1 * coef_)])
-    
+    clf = MLPClassifier(hidden_layer_sizes=(num_layers,), random_state=random_state, max_iter=1, warm_start=True)
+    for _ in range(num_epochs):
+        clf.fit(X_train, y_train.astype('int'))
+     
     y_pred = clf.predict(X_test) 
     fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], b1_bins, kfold_info, "Fold" + str(i+1))
     
@@ -190,6 +195,7 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
 
+
 with pd.ExcelWriter(os.path.join(exp_dir, "kfold_detail.xlsx")) as writer:
     for f in list(kfold_info.keys()):
         df = pd.DataFrame(kfold_info[f])
@@ -199,13 +205,4 @@ report_df = pd.DataFrame.from_dict(report_dict)
 report_df.to_excel(os.path.join(exp_dir, "metric_report.xlsx"), columns=report_titles, index=False)
 
 # visualization
-for i in range(len(report_feats["importances"])):
-    plt_importances, plt_std, plt_feat_keys = report_feats["importances"][i], report_feats["std"][i], report_feats["feat_keys"][i]
-    forest_importances = pd.Series(plt_importances, index=plt_feat_keys).sort_values(ascending=False)
-    fig, ax = plt.subplots()
-    #forest_importances.plot.bar(yerr=plt_std, ax=ax)
-    forest_importances.plot.bar(ax=ax)
-    ax.set_title("Feature importances using MDI")
-    ax.set_ylabel("Mean decrease in impurity (MDI)")
-    fig.tight_layout()
-    fig.savefig(os.path.join(exp_dir, "feats-importances_" + str(i+1)+"-fold.png"), dpi=600)
+
