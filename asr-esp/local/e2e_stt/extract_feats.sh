@@ -16,7 +16,7 @@ max_segment_length=15
 . ./cmd.sh
 
 echo "$0 $@"
-. utils/parse_options.sh
+. parse_options.sh
 
 
 set -euo pipefail
@@ -24,11 +24,17 @@ set -euo pipefail
 if [ $stage -le 0 ]; then
     for data_set in $data_sets; do
         if [ "$use_streaming" == "false" ]; then
-            python local/e2e_stt/prepare_feats_wenet.py --data_dir $data_root/$data_set --model_name $model_name \
+            python local/e2e_stt/prepare_feats.py --data_dir $data_root/$data_set --model_name $model_name \
                                                   --model_tag "$model_tag" --vad_mode $vad_mode --max_segment_length $max_segment_length
         else
-            python local/e2e_stt/prepare_feats_wenet_streaming.py --data_dir $data_root/$data_set --model_name $model_name \
+            python local/e2e_stt/prepare_feats_streaming.py --data_dir $data_root/$data_set --model_name $model_name \
                                               --model_tag "$model_tag" --vad_mode $vad_mode --max_segment_length $max_segment_length
         fi
+    done
+fi
+
+if [ $stage -le 1 ]; then
+    for data_set in $data_sets; do
+        compute-wer --text --mode=present ark:$data_root/$data_set/text ark:$data_root/$data_set/$model_name/text > $data_root/$data_set/$model_name/wer
     done
 fi

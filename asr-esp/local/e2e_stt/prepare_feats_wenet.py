@@ -57,7 +57,7 @@ utt_list = []
 # stt and ctm
 all_info = {}
 
-speech_model = decoder = wenet.Decoder(model_tag,
+decoder = wenet.Decoder(model_tag,
                         lang='en',
                         nbest=5,
                         enable_timestamp=True)
@@ -109,4 +109,3 @@ print(output_dir)
 with open(output_dir + "/text", "w") as fn:
     for uttid in utt_list:
         fn.write(uttid + " " + all_info[uttid]["stt"] + "\n")
-

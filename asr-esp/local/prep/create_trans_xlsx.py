@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 data_dir = args.data_dir
 dest_dir = args.dest_dir
-text_fn = os.path.join(args.data_dir, "text")
+text_fn = os.path.join(data_dir, "text")
 
 # filename, transcript (stt), transcript (human), notes
 titles = ["filename", "trans_stt", "trans_human", "notes"]
@@ -32,4 +32,4 @@ with open(text_fn, "r") as fn:
         
 
 df = pd.DataFrame(xlsx_info)
-df.to_excel(os.path.join(dest_dir, "trans.xlsx"), index=False)
+df.to_excel(os.path.join(data_dir, "trans.xlsx"), index=False)
