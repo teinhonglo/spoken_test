@@ -11,17 +11,18 @@ from  sklearn import preprocessing
 from scipy import stats
 import logging
 import matplotlib.pyplot as plt
+import io
 
 import argparse
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--data_dir",
-                    default="data/spoken_test_2022_jan28",
+                    default="data/gept_b1",
                     type=str)
 
 parser.add_argument("--model_name",
-                    default="librispeech_mct_tdnnf_kaldi_tgt3",
+                    default="data/gept_b1/multi_en_mct_cnn_tdnnf_tgt3meg-dl",
                     type=str)
 
 parser.add_argument("--part",
@@ -32,8 +33,8 @@ parser.add_argument("--aspect",
                     default="2",
                     type=str)
 
-parser.add_argument("--exp_dir",
-                    default="exp/linear_regression",
+parser.add_argument("--exp_root",
+                    default="exp/gept-p2/linear_regression",
                     type=str)
 
 args = parser.parse_args()
@@ -45,13 +46,16 @@ label_fn = "grader.spk2p" + part + "s" + args.aspect
 feats_fn = model_name + "-feats.xlsx"
 
 data_dir = args.data_dir
-exp_dir = args.exp_dir
-
-if not os.path.exists(exp_dir):
-    os.path.mkdirs(exp_dir)
 
 spk2label = {}
 spk2feats = {}
+aspects_dict = {"1":"content", "2": "pronunciation", "3": "vocabulary"}
+
+exp_dir = os.path.join(args.exp_root, aspects_dict[args.aspect])
+
+print(exp_dir)
+if not os.path.exists(exp_dir):
+    os.makedirs(exp_dir)
 
 def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
     print("=" * 10, "Raw data", "=" * 10)
@@ -133,8 +137,8 @@ y = np.array(y)
 spk_list = np.array(spk_list)
 
 m = len(y) # Number of training examples
-b1_bins = np.array([1.0, 4.0, 5.0])
-all_bins = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+cefr_bins = np.array([2.5, 4.5, 6.5])
+all_bins = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
 kf = KFold(n_splits=5, random_state=66, shuffle=True)
 
 acc = 0
@@ -146,11 +150,17 @@ report_dict = {rt: [] for rt in report_titles}
 
 # TRAINING (K-FOLD)
 for i, (train_index, test_index) in enumerate(kf.split(X)):
+    
+    kfold_dir = os.path.join(exp_dir, str(i+1))
+    
+    if not os.path.exists(kfold_dir):
+        os.makedirs(kfold_dir)
+    
     print("Fold", (i+1))
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
-    selector, importances, std = feature_selection(X_train, y_train, b1_bins)
+    selector, importances, std = feature_selection(X_train, y_train, all_bins)
     select_support = selector.get_support() * 1
     select_feat_keys = feat_keys[np.nonzero(select_support)]
     print(select_feat_keys)
@@ -174,7 +184,7 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     print(coef_[np.argsort(-1 * coef_)])
     
     y_pred = clf.predict(X_test) 
-    fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], b1_bins, kfold_info, "Fold" + str(i+1))
+    fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], cefr_bins, kfold_info, "Fold" + str(i+1))
     
     report_dict["fold"].append(i+1)
     report_dict["acc"].append(fold_acc)
@@ -186,6 +196,11 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     report_dict["weighted_f1-score"].append(weighted_avg["f1-score"])
     
     acc += fold_acc
+    
+    predictions_file = os.path.join(kfold_dir, "predictions.txt")
+    with io.open(predictions_file, 'w') as file:
+        predictions = '\n'.join(['{} | {}'.format(str(pred), str(target)) for pred, target in zip(y_pred, y_test)])
+        file.write(predictions)
     
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
