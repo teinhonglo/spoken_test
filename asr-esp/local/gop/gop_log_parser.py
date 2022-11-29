@@ -7,6 +7,7 @@ import yaml
 import json
 
 from gop_web_parser import GOP
+import re
 
 parser = argparse.ArgumentParser()
 
@@ -92,14 +93,20 @@ for log_path in tqdm(fns):
                     continue
                 
                 prompt = text_dict[utt_id]
+                #print(prompt)
+                prompt = re.sub("<[A-Z_]+>", "", prompt)
+                prompt = " ".join(prompt.split())
+                #print(prompt)
                 # process GOP
                 final_msg = gop_msg.split("<GOP>")[1]
                 gop_parser.set_prompt(prompt)
                 try:
                     gop_word_dict = gop_parser.process_GOP(final_msg)
                     gop_dict[utt_id] = gop_word_dict
-                except:
+                except Exception as e:
+                    print(e)
                     print(utt_id, prompt)
+                    exit()
                     
 
 with open(args.json_dir + "/gop_scores.json", "w") as fn:

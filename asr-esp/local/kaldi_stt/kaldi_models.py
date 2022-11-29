@@ -5,6 +5,7 @@ import soundfile
 from collections import defaultdict
 from tqdm import tqdm
 from g2p_en import G2p
+import re
 
 
 '''
@@ -115,6 +116,7 @@ class SpeechModel(object):
                 uttid, _, start_time, duration, word_id = line.split()
                 if prev_uttid != uttid:
                     count = 0
+                
                 # NOTE: we use the average value of phoneme-level gop score as the word-level gop score
                 word_gop_id, word_gop = words_gop_json_dict[uttid][count]
                 
@@ -156,7 +158,7 @@ class SpeechModel(object):
                     continue
 
                 phn_gop_id, phn_gop = phns_gop_json_dict[uttid][count]
-                
+               
                 assert phn_id == phn_gop_id
                 
                 start_time = round(float(start_time), 4)

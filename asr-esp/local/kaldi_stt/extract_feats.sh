@@ -21,7 +21,7 @@ set -euo pipefail
 model=$model_dir/model
 ivec_extractor=$model_dir/extractor
 ivec_dir=$model_dir/model_online
-lang=$model_dir/data/lang
+lang=$model_dir/data/lang_test$graph_affix
 mfcc_config=$model_dir/conf/mfcc_hires.conf
 cmvn_config=$model_dir/conf/online_cmvn.conf
 
@@ -93,13 +93,12 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ] ; then
         fi
         
         utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
-        if $replace_text; then
-            best_wer=${decode_dir}/scoring_kaldi/best_wer
-            recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
-            recog_text=$decode_dir/scoring_kaldi/$recog_fn
-            echo "Copy from $recog_text to $dest_dir/text"
-            cp $recog_text $dest_dir/text
-        fi
+        best_wer=${decode_dir}/scoring_kaldi/best_wer
+        recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
+        recog_text=$decode_dir/scoring_kaldi/$recog_fn
+        echo "Copy from $recog_text to $dest_dir/text"
+        cp $recog_text $dest_dir/text
+        sed -i "s: <[A-Z_]\+>::g" $dest_dir/text
     done
 fi
 
