@@ -223,4 +223,5 @@ for i in range(len(report_feats["importances"])):
     ax.set_title("Feature importances using MDI")
     ax.set_ylabel("Mean decrease in impurity (MDI)")
     fig.tight_layout()
-    fig.savefig(os.path.join(exp_dir, "feats-importances_" + str(i+1)+"-fold.png"), dpi=600)
+    kfold_dir = os.path.join(exp_dir, str(i+1))
+    fig.savefig(os.path.join(kfold_dir, "feats-importances_" + str(i+1)+"-fold.png"), dpi=600)
