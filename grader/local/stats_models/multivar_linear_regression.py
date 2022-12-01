@@ -1,17 +1,21 @@
-import numpy as np
-import pandas as pd
-from sklearn import linear_model
+import io
 import os
-from tqdm import tqdm
+import sys
+sys.path.append("./local")
+from scipy import stats
+import numpy as np
+from sklearn import linear_model
+from  sklearn import preprocessing
+from sklearn.utils import resample
 from sklearn.model_selection import KFold
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import mean_squared_error
-from  sklearn import preprocessing
-from scipy import stats
+import pandas as pd
 import logging
 import matplotlib.pyplot as plt
-import io
+from tqdm import tqdm
+from metrics_cpu import compute_metrics
 
 import argparse
 
@@ -37,11 +41,16 @@ parser.add_argument("--exp_root",
                     default="exp/gept-p2/linear_regression",
                     type=str)
 
+parser.add_argument("--n_resamples",
+                    default="-1",
+                    type=int)
+
 args = parser.parse_args()
 
 # data/spoken_test_2022_jan28/grader.spk2p3s2
 model_name = args.model_name
 part = args.part
+n_resamples = args.n_resamples
 label_fn = "grader.spk2p" + part + "s" + args.aspect
 feats_fn = model_name + "-feats.xlsx"
 
@@ -50,12 +59,63 @@ data_dir = args.data_dir
 spk2label = {}
 spk2feats = {}
 aspects_dict = {"1":"content", "2": "pronunciation", "3": "vocabulary"}
+n_folds = "1 2 3 4 5".split()
 
 exp_dir = os.path.join(args.exp_root, aspects_dict[args.aspect])
 
-print(exp_dir)
 if not os.path.exists(exp_dir):
+    print(exp_dir)
     os.makedirs(exp_dir)
+
+def do_resample(X, y, n_resamples=50, scales=[1,2,3,4,5,6,7,8], resample_scales=[1,2,4,6]):
+    X_balanced = None
+    y_balanced = None    
+
+    print("Resampling")
+    for g in scales:
+        n_rs = n_resamples
+        X_sub = np.copy(X[y==g])
+        y_sub = np.copy(y[y==g])
+        if len(X_sub) == 0: continue
+        
+        if g in resample_scales:
+            X_copied = None
+            while n_rs - len(X_sub) > 0:
+                if X_copied is None:
+                    X_copied = np.copy(X_sub)
+                    y_copied = np.copy(y_sub)
+                else:
+                    X_copied = np.vstack([X_copied, X_sub])
+                    y_copied = np.hstack([y_copied, y_sub])
+                n_rs -= len(X_sub)
+            
+            replace=True
+            
+            if len(X_sub) >= n_rs:
+                replace=False
+            
+            X_resampled, y_resampled = resample(X_sub,
+                                                y_sub,
+                                                replace=replace,
+                                                n_samples=n_rs,
+                                                random_state=66)
+            if X_copied is not None:
+                X_resampled = np.vstack((X_copied, X_resampled))
+                y_resampled = np.hstack((y_copied, y_resampled))
+        else:
+            X_resampled = X_sub
+            y_resampled = y_sub
+            
+        
+        if X_balanced is None or y_balanced is None:
+            X_balanced = X_resampled
+            y_balanced = y_resampled
+        else:
+            X_balanced = np.vstack((X_balanced, X_resampled))
+            y_balanced = np.hstack((y_balanced, y_resampled))
+        print(g, X_sub.shape, y.shape, X_balanced.shape, y_balanced.shape)
+    
+    return X_balanced, y_balanced
 
 def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
     print("=" * 10, "Raw data", "=" * 10)
@@ -91,6 +151,14 @@ def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
     kfold_info[fold]["pred"] += y_pred.tolist()
     kfold_info[fold]["pred(cefr)"] += y_pred_cefr.tolist()
     kfold_info[fold]["results"] += (y_pred_cefr - y_test_cefr).tolist()
+    
+    kfold_info["All"]["spk_id"] += spk_list.tolist()
+    kfold_info["All"]["anno"] += y_test.tolist()
+    kfold_info["All"]["anno(cefr)"] += y_test_cefr.tolist()
+    kfold_info["All"]["pred"] += y_pred.tolist()
+    kfold_info["All"]["pred(cefr)"] += y_pred_cefr.tolist()
+    kfold_info["All"]["results"] += (y_pred_cefr - y_test_cefr).tolist()
+
     
     return acc, macro_avg, weighted_avg, kfold_info
 
@@ -139,14 +207,20 @@ spk_list = np.array(spk_list)
 m = len(y) # Number of training examples
 cefr_bins = np.array([2.5, 4.5, 6.5])
 all_bins = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
-kf = KFold(n_splits=5, random_state=66, shuffle=True)
+kf = KFold(n_splits=len(n_folds), random_state=66, shuffle=True)
 
 acc = 0
 infos = ["spk_id", "anno", "anno(cefr)", "pred", "pred(cefr)", "results"]
-kfold_info = {"Fold" + str(1+i):{info:[] for info in infos} for i in range(5)}
+kfold_info = {"Fold" + str(1+i):{info:[] for info in infos} for i in range(len(n_folds))}
+kfold_info["All"] = {info:[] for info in infos}
 report_titles = ["fold", "acc", "macro_precision", "macro_recall", "macro_f1-score", "weighted_precision", "weighted_recall", "weighted_f1-score"]
 report_feats = {"importances":[], "std":[], "feat_keys":[]}
 report_dict = {rt: [] for rt in report_titles}
+total_losses = {"origin":{}, "cefr":{}}
+all_predictions = None
+all_annotations = None
+all_predictions_cefr = None
+all_annotations_cefr = None
 
 # TRAINING (K-FOLD)
 for i, (train_index, test_index) in enumerate(kf.split(X)):
@@ -159,6 +233,9 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     print("Fold", (i+1))
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
+    
+    if n_resamples != -1:
+        X_train, y_train = do_resample(X_train, y_train, n_resamples=n_resamples, resample_scales=[1,2,4,6,8])
     
     selector, importances, std = feature_selection(X_train, y_train, all_bins)
     select_support = selector.get_support() * 1
@@ -185,6 +262,12 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     
     y_pred = clf.predict(X_test) 
     fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], cefr_bins, kfold_info, "Fold" + str(i+1))
+    total_losses["origin"][str(i+1)] = {}
+    compute_metrics(total_losses["origin"][str(i+1)], np.array(y_pred), np.array(y_test))
+    y_test_cefr = np.digitize(np.array(y_test), cefr_bins)
+    y_pred_cefr = np.digitize(np.array(np.round_(y_pred * 2) / 2), cefr_bins)
+    total_losses["cefr"][str(i+1)] = {}
+    compute_metrics(total_losses["cefr"][str(i+1)], np.array(y_pred_cefr), np.array(y_test_cefr))
     
     report_dict["fold"].append(i+1)
     report_dict["acc"].append(fold_acc)
@@ -194,14 +277,28 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     report_dict["weighted_precision"].append(weighted_avg["precision"])
     report_dict["weighted_recall"].append(weighted_avg["recall"])
     report_dict["weighted_f1-score"].append(weighted_avg["f1-score"])
-    
     acc += fold_acc
     
     predictions_file = os.path.join(kfold_dir, "predictions.txt")
+    
     with io.open(predictions_file, 'w') as file:
         predictions = '\n'.join(['{} | {}'.format(str(pred), str(target)) for pred, target in zip(y_pred, y_test)])
         file.write(predictions)
     
+    if all_predictions is None:
+        all_predictions = np.array(y_pred)
+        all_annotations = np.array(y_test)
+        all_predictions_cefr = y_pred_cefr
+        all_annotations_cefr = y_test_cefr
+    else:
+        all_predictions = np.hstack((all_predictions, np.array(y_pred)))
+        all_annotations = np.hstack((all_annotations, np.array(y_test)))
+        all_predictions_cefr = np.hstack((all_predictions_cefr, y_pred_cefr))
+        all_annotations_cefr = np.hstack((all_annotations_cefr, y_test_cefr))
+    
+plot_scatter(all_predictions, all_annotations, title="Scatter of predctions and annotations", fig_path=os.path.join(exp_dir, "origin.png"))
+plot_scatter(all_predictions_cefr, all_annotations_cefr, title="Scatter of predctions and annotations", fig_path=os.path.join(exp_dir, "cefr.png"))
+
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
 
@@ -225,3 +322,20 @@ for i in range(len(report_feats["importances"])):
     fig.tight_layout()
     kfold_dir = os.path.join(exp_dir, str(i+1))
     fig.savefig(os.path.join(kfold_dir, "feats-importances_" + str(i+1)+"-fold.png"), dpi=600)
+
+
+def report_losses(total_losses):
+    metrics = list(total_losses[n_folds[0]].keys())
+    df_losses = {k:[] for k in list(metrics)}
+    
+    for nf in n_folds: 
+        for metric in list(metrics):
+            df_losses[metric].append(total_losses[nf][metric])
+
+    df_losses = pd.DataFrame.from_dict(df_losses)
+    print(df_losses.mean())
+
+print("origin")
+report_losses(total_losses["origin"])
+print("cefr")
+report_losses(total_losses["cefr"])
