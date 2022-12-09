@@ -26,7 +26,7 @@ parser.add_argument("--data_dir",
                     type=str)
 
 parser.add_argument("--model_name",
-                    default="data/gept_b1/multi_en_mct_cnn_tdnnf_tgt3meg-dl",
+                    default="multi_en_mct_cnn_tdnnf_tgt3meg-dl",
                     type=str)
 
 parser.add_argument("--part",
@@ -44,6 +44,12 @@ parser.add_argument("--exp_root",
 parser.add_argument("--n_resamples",
                     default="-1",
                     type=int)
+
+parser.add_argument("--do_round",
+                    action="store_true")
+
+parser.add_argument("--merge_below_b1",
+                    action="store_true")
 
 args = parser.parse_args()
 
@@ -113,14 +119,20 @@ def do_resample(X, y, n_resamples=50, scales=[1,2,3,4,5,6,7,8], resample_scales=
         else:
             X_balanced = np.vstack((X_balanced, X_resampled))
             y_balanced = np.hstack((y_balanced, y_resampled))
-        print(g, X_sub.shape, y.shape, X_balanced.shape, y_balanced.shape)
+        print(g, X_sub.shape, y_sub.shape, X_balanced.shape, y_balanced.shape)
+    
+    print("Origin", X.shape, y.shape)
+    print("Balanced", X_balanced.shape, y_balanced.shape)
     
     return X_balanced, y_balanced
 
-def report(y_test, y_pred, spk_list, bins, kfold_info, fold="Fold1"):
+def report(y_test, y_pred, spk_list, all_bins, cefr_bins, kfold_info, fold="Fold1"):
     print("=" * 10, "Raw data", "=" * 10)
-    y_test_cefr = np.digitize(np.array(y_test), bins)
-    y_pred_cefr = np.digitize(np.array(np.round_(y_pred * 2) / 2), bins)
+    y_test = np.digitize(np.array(y_test), all_bins) + 1
+    y_pred = np.digitize(np.array(y_pred), all_bins) + 1
+
+    y_test_cefr = np.digitize(y_test, cefr_bins) + 1
+    y_pred_cefr = np.digitize(y_pred, cefr_bins) + 1
     print("spk_list, y_test, y_test_cefr, y_pred, y_pred_cefr")
     for i in range(len(spk_list)):
         print(spk_list[i], y_test[i], y_test_cefr[i], y_pred[i], y_pred_cefr[i])
@@ -202,6 +214,13 @@ for spk in list(spk2label.keys()):
 
 X = np.array(X)
 y = np.array(y)
+
+if args.do_round:
+    y = np.ceil(y)
+
+if args.merge_below_b1:
+    y[np.where(y <= 4)] = 4
+
 spk_list = np.array(spk_list)
 
 m = len(y) # Number of training examples
@@ -261,7 +280,7 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     print(coef_[np.argsort(-1 * coef_)])
     
     y_pred = clf.predict(X_test) 
-    fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], cefr_bins, kfold_info, "Fold" + str(i+1))
+    fold_acc, macro_avg, weighted_avg, kfold_info = report(y_test, y_pred, spk_list[test_index], all_bins, cefr_bins, kfold_info, "Fold" + str(i+1))
     total_losses["origin"][str(i+1)] = {}
     compute_metrics(total_losses["origin"][str(i+1)], np.array(y_pred), np.array(y_test))
     y_test_cefr = np.digitize(np.array(y_test), cefr_bins)
@@ -296,8 +315,6 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
         all_predictions_cefr = np.hstack((all_predictions_cefr, y_pred_cefr))
         all_annotations_cefr = np.hstack((all_annotations_cefr, y_test_cefr))
     
-plot_scatter(all_predictions, all_annotations, title="Scatter of predctions and annotations", fig_path=os.path.join(exp_dir, "origin.png"))
-plot_scatter(all_predictions_cefr, all_annotations_cefr, title="Scatter of predctions and annotations", fig_path=os.path.join(exp_dir, "cefr.png"))
 
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
