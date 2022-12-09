@@ -253,8 +253,6 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
     
-    if n_resamples != -1:
-        X_train, y_train = do_resample(X_train, y_train, n_resamples=n_resamples, resample_scales=[1,2,4,6,8])
     
     selector, importances, std = feature_selection(X_train, y_train, all_bins)
     select_support = selector.get_support() * 1
@@ -268,6 +266,9 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     
     X_train = selector.transform(X_train)
     X_test = selector.transform(X_test)
+    
+    if n_resamples != -1:
+        X_train, y_train = do_resample(X_train, y_train, n_resamples=n_resamples, resample_scales=[1,2,4,6,8])
     
     clf = linear_model.Lasso(alpha=0.1)
     clf.fit(X_train, y_train)
