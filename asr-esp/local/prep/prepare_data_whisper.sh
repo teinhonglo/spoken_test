@@ -11,6 +11,9 @@ data_root=data
 # vad parameters
 vad_mode=0
 max_segment_length=15
+# whisper parameters
+use_v2="false" # true == transcribe; false==decode
+use_condition="false"
 lang="english"
 
 . ./cmd.sh
@@ -34,8 +37,10 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     ./local/e2e_stt/extract_feats_whisper.sh --data_root $data_root --data_sets $data_name \
-                                    --model_name $model_name --model_tag "$model_tag" \
-                                    --vad_mode $vad_mode --max_segment_length $max_segment_length --use_streaming $use_streaming --lang $lang
+                                            --model_name $model_name --model_tag "$model_tag" \
+                                            --vad_mode $vad_mode --max_segment_length $max_segment_length \
+                                            --use_streaming $use_streaming --lang $lang --use_condition $use_condition \
+                                            --use_v2 $use_v2
     
     dest_dir=$data_root/$data_name/$model_name
     

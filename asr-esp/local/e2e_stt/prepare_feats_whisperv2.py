@@ -92,55 +92,36 @@ with open(data_dir + "/text", "r") as fn:
         info = line.split()
         text_dict[info[0]] = " ".join(info[1:])
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 for i, uttid in tqdm(enumerate(utt_list)):
     wav_path = wavscp_dict[uttid]
     text_prompt = text_dict[uttid]
     # Confirm the sampling rate is equal to that of the training corpus.
     # If not, you need to resample the audio data before inputting to speech2text
-    audio, rate = vad_model.read_wave(wav_path)
-    speech = np.frombuffer(audio, dtype='int16').astype(np.float32) / 32768.0
-    assert rate == sample_rate
-    total_duration = speech.shape[0] / rate
+    # audio, rate = vad_model.read_wave(wav_path)
+    # speech = np.frombuffer(audio, dtype='int16').astype(np.float32) / 32768.0
+    # assert rate == sample_rate
+    # total_duration = speech.shape[0] / rate
     # audio feature
     #_, f0_info = audio_model.get_f0(speech)
     #_, energy_info = audio_model.get_energy(speech)
     # fluency feature and confidence feature
-    speechs = vad_model.get_speech_segments(audio, rate)
+    # speechs = vad_model.get_speech_segments(audio, rate)
     text_org = []
     all_tokens = []
     prompt_reset_since = 0
     decode_options = {"suppress_tokens": suppress_tokens}
-     
-    for speech_seg in speechs:
-        # make log-Mel spectrogram and move to the same device as the model
-        speech_seg = whisper.pad_or_trim(speech_seg)
-        mel = whisper.log_mel_spectrogram(speech_seg).to(speech_model.device)
     
-        # detect the spoken language
-        #_, probs = speech_model.detect_language(mel)
-        #print(f"Detected language: {max(probs, key=probs.get)}")
-        
-        # decode the audio
-        if lang == "none":
-            decode_options["language"] = None
-        else:
-            decode_options["language"] = lang
-
-        if not args.condition_on_previous_text:
-            # do not feed the prompt tokens if a high temperature was used
-            prompt_reset_since = len(all_tokens)
-        
-        decode_options["prompt"] = all_tokens[prompt_reset_since:]
-        kwargs = {**decode_options}
-        options = whisper.DecodingOptions(**kwargs)
-        
-        result = whisper.decode(speech_model, mel, options)
-        text_org.append(result.text)
-        
-        tokens = torch.tensor(result.tokens)
-        all_tokens.extend(tokens.tolist())
+    if lang == "none":
+        decode_options["language"] = None
+    else:
+        decode_options["language"] = lang
     
-    text_org = " ".join(" ".join(text_org).split())
+    result = speech_model.transcribe(audio=wav_path, condition_on_previous_text = args.condition_on_previous_text, **decode_options)
+    #pp.pprint(result)
+    
+    text_org = result["text"]
     text = normalizer(text_org)
     
     all_info[uttid] = { "stt": text,
