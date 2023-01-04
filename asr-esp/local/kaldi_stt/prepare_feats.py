@@ -4,7 +4,19 @@ import soundfile
 from tqdm import tqdm
 from kaldi_models import SpeechModel
 from audio_models import AudioModel
+from nlp_models import NlpModel
+import numpy as np
 import argparse
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 parser = argparse.ArgumentParser()
 
@@ -50,6 +62,7 @@ recog_dict = {}
 
 speech_model = SpeechModel(recog_dict, gop_result_dir, gop_json_fn)
 audio_model = AudioModel(sample_rate)
+nlp_model = NlpModel()
 
 with open(data_dir + "/wav.scp", "r") as fn:
     for i, line in enumerate(fn.readlines()):
@@ -90,18 +103,19 @@ for i, uttid in tqdm(enumerate(utt_list)):
     sil_feats_info, response_duration = speech_model.sil_feats(word_ctm_info, total_duration)
     word_feats_info, response_duration = speech_model.word_feats(word_ctm_info, total_duration)
     phone_feats_info, response_duration = speech_model.phone_feats(phn_ctm_info, total_duration)
+    vp_feats_info = nlp_model.vocab_profile_feats(text)
     
     all_info[uttid] = { "stt": text, "prompt": text_prompt,
                         "wav_path": wav_path, "ctm": word_ctm_info, 
                         "feats": {  **f0_info, **energy_info, 
                                     **sil_feats_info, **word_feats_info,
-                                    **phone_feats_info,
+                                    **phone_feats_info, **vp_feats_info,
                                     "total_duration": total_duration,
                                     "response_duration": response_duration}}
 
 print(output_dir)
 with open(output_dir + "/all.json", "w") as fn:
-    json.dump(all_info, fn, indent=4, ensure_ascii=False)
+    json.dump(all_info, fn, indent=4, ensure_ascii=False, cls=NpEncoder)
 
 # write STT Result to file
 with open(output_dir + "/text", "w") as fn:

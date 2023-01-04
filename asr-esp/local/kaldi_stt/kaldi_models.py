@@ -240,12 +240,12 @@ class SpeechModel(object):
         '''
         TODO:
         number of repeated words (short pauses)
-        distinct word
         articulation rate
         '''
         word_count_dict = defaultdict(int)
         word_duration_list = []
         word_conf_list = []
+        word_charlen_list = []
         num_disfluecy = 0
         num_repeat = 0
         prev_words = []
@@ -261,6 +261,7 @@ class SpeechModel(object):
         for word, start_time, duration, conf in ctm_info:
             word_duration_list.append(duration)
             word_conf_list.append(conf)
+            word_charlen_list.append(len(word))
             word_count_dict[word] += 1
             
             if word in self.disflunecy_words:
@@ -273,11 +274,14 @@ class SpeechModel(object):
             
         # strat_time and duration of last word
         # word in articlulation time
+        word_duration_stats = get_stats(word_duration_list, prefix = "word_duration_")
+        word_conf_stats = get_stats(word_conf_list, prefix="word_conf_")
+        word_charlen_stats = get_stats(word_charlen_list, prefix="word_charlen_")
+        
+        # word basic_dict
         word_count = sum(list(word_count_dict.values()))
         word_distinct = len(list(word_count_dict.keys()))
         word_freq = word_count / response_duration
-        word_duration_stats = get_stats(word_duration_list, prefix = "word_duration_")
-        word_conf_stats = get_stats(word_conf_list, prefix="word_conf_")
         
         word_basic_dict = { 
                             "word_count": word_count,
@@ -288,9 +292,11 @@ class SpeechModel(object):
                           }
         
         word_stats_dict = merge_dict(word_duration_stats, word_conf_stats)
+        word_stats_dict = merge_dict(word_charlen_stats, word_stats_dict)
         word_dict = merge_dict(word_basic_dict, word_stats_dict)
         
         return word_dict, response_duration
+    
      
     def phone_feats(self, ctm_info, total_duration):
         phone_count_dict = defaultdict(int)

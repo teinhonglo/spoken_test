@@ -52,3 +52,6 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     dest_dir=$data_root/$data_name/$model_name
     ./local/prep/prepare_xlsx.sh --data_root $data_root --data_name $data_name --dest_dir $dest_dir
 fi
+
+
+
