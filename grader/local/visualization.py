@@ -67,10 +67,14 @@ for score in list(kfold_info.keys()):
                 labels = ["A1","A2","B1", "B2"]
             
             conf_mat = confusion_matrix(y_true, y_pred, labels=range(len(labels)))
+            row_sum = np.sum(conf_mat, axis = 1)
+            conf_mat_prec = conf_mat / row_sum[:, np.newaxis]
+            conf_mat_prec[np.where(conf_mat == 0)] = 0
             conf_mat_df = pd.DataFrame(conf_mat, index=labels, columns=labels)
-                        
+            conf_mat_prec_df = pd.DataFrame(conf_mat_prec, index=labels, columns=labels)
+
             #print(conf_mat)
-            sns.heatmap(conf_mat_df, annot=True, fmt='g')
+            sns.heatmap(data=conf_mat_prec_df, annot=conf_mat_df, fmt='g')
             plt.xlabel("Predictions")
             plt.ylabel("Annotations")
             plt.savefig(file_name)

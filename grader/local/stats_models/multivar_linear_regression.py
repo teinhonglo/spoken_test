@@ -4,6 +4,7 @@ import sys
 sys.path.append("./local")
 from scipy import stats
 import numpy as np
+
 from sklearn import linear_model
 from  sklearn import preprocessing
 from sklearn.utils import resample
@@ -11,6 +12,8 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import mean_squared_error
+from sklearn.utils.class_weight import compute_class_weight
+
 import pandas as pd
 import logging
 import matplotlib.pyplot as plt
@@ -50,6 +53,9 @@ parser.add_argument("--do_round",
 
 parser.add_argument("--merge_below_b1",
                     action="store_true")
+
+parser.add_argument("--do_sample_weight",
+                    action='store_true')
 
 args = parser.parse_args()
 
@@ -126,6 +132,21 @@ def do_resample(X, y, n_resamples=50, scales=[1,2,3,4,5,6,7,8], resample_scales=
     
     return X_balanced, y_balanced
 
+def calc_sample_weight(train_y, weight_type='balanced'):
+    classes = np.unique(train_y)
+    cw_np = compute_class_weight(class_weight=weight_type, classes=classes, y=train_y)
+    cw_tbl = {c: w for c, w in zip(classes, cw_np)}
+    
+    sample_weight = np.copy(train_y)
+    
+    for i, y in enumerate(train_y):
+        sample_weight[i] = cw_tbl[y]
+   
+    print("sample", y)
+    print("sample weight", sample_weight) 
+    return sample_weight
+    
+    
 def report(y_test, y_pred, spk_list, all_bins, cefr_bins, kfold_info, fold="Fold1"):
     print("=" * 10, "Raw data", "=" * 10)
     y_test = np.digitize(np.array(y_test), all_bins) + 1
@@ -188,6 +209,8 @@ def feature_selection(X, y, bins):
     
     return selector, importances, std
 
+
+#if __name__ == "__main__":
 # label
 with open(os.path.join(data_dir, label_fn), "r") as fn:
     for line in fn.readlines():
@@ -270,8 +293,14 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
     if n_resamples != -1:
         X_train, y_train = do_resample(X_train, y_train, n_resamples=n_resamples, resample_scales=[1,2,4,6,8])
     
+    
     clf = linear_model.Lasso(alpha=0.1)
-    clf.fit(X_train, y_train)
+    
+    if args.do_sample_weight:
+        sample_weight = calc_sample_weight(y_train)
+        clf.fit(X_train, y_train, sample_weight)
+    else:
+       clf.fit(X_train, y_train)
     
     coef_ = clf.coef_[np.nonzero(clf.coef_)]
     feat_nz_keys = select_feat_keys[np.nonzero(clf.coef_)]
@@ -315,8 +344,8 @@ for i, (train_index, test_index) in enumerate(kf.split(X)):
         all_annotations = np.hstack((all_annotations, np.array(y_test)))
         all_predictions_cefr = np.hstack((all_predictions_cefr, y_pred_cefr))
         all_annotations_cefr = np.hstack((all_annotations_cefr, y_test_cefr))
-    
 
+    
 acc /= kf.get_n_splits(X)
 print("Accuracy", acc)
 
