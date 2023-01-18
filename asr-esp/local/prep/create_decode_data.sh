@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 stage=0
+corpus_path=
 data_root=data
 test_sets="voice_2022"
 
@@ -17,7 +18,11 @@ if [ $stage -le 0 ]; then
             fi
         done
         
-        for wav_path in `find $data_dir/wavs/ -name "*.wav"`; do
+        if [ -z $corpus_path ]; then
+            corput_path="$data_dir/wavs"
+        fi
+
+        for wav_path in `find $corpus_path -name "*.wav"`; do
             wav_fn=`basename $wav_path | cut -d"." -f1`
             phn_no=`echo $wav_fn | cut -d"-" -f1`
             echo "$wav_fn $wav_path" >> $data_root/$test_set/wav.scp
