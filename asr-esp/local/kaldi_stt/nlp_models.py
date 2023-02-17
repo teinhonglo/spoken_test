@@ -56,6 +56,7 @@ def get_stats(numeric_list, prefix=""):
 class NlpModel(object):
     def __init__(self, tokenize_pretokenized=False, 
                 cefr_dict_path="/share/nas167/teinhonglo/AcousticModel/spoken_test/corpus/speaking/CEFR-J_Wordlist_Ver1.6.xlsx"):
+                #cefr_dict_path="/share/nas167/teinhonglo/AcousticModel/spoken_test/corpus/speaking/CEFR-J_Wordlist_Ver1.6_with_C1C2.xlsx"):
         
         self.nlp_tokenize = stanza.Pipeline(lang='en', processors='tokenize,pos,lemma', use_gpu='False', tokenize_pretokenized=tokenize_pretokenized)
         self.cefr_dict = self.__build_cefr_dict(cefr_dict_path)
@@ -91,6 +92,7 @@ class NlpModel(object):
         pos_info = {pt: 0 for pt in self.pos_tags}
         
         doc = self.nlp_tokenize(text.lower())
+        hit_dict = defaultdict(dict)
         
         for si, sent in enumerate(doc.sentences):
             for wi, word in enumerate(sent.words):
@@ -98,8 +100,12 @@ class NlpModel(object):
                 upos = word.pos
                 pos_info[upos] += 1
                 
+                if lemma_word in hit_dict and upos in hit_dict[lemma_word]:
+                    continue
+                
                 try:
                     word_cefr = self.cefr_dict[lemma_word][upos]
+                    hit_dict[lemma_word][upos] = 1
                 except:
                     word_cefr = None
                 
