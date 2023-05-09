@@ -10,7 +10,17 @@
 # conf/queue.conf in http://kaldi-asr.org/doc/queue.html for more information,
 # or search for the string 'default_config' in utils/queue.pl or utils/slurm.pl.
 
-export train_cmd="run.pl --mem 2G --num-threads 4"
-export cuda_cmd="run.pl --mem 4G"
-export decode_cmd="queue.pl --mem 4G --num-threads 4"
-export mkgraph_cmd="queue.pl --mem 8G"
+hostname=`hostname`
+
+if [ $hostname == 'gpu-server.com' ] || [ $hostname == 'SOTA' ] || [ $hostname == 'dino4ur' ]; then
+    export train_cmd="run.pl --mem 2G --num-threads 2"
+    export cuda_cmd="run.pl --mem 4G"
+    export decode_cmd="run.pl --mem 4G --num-threads 2"
+    export mkgraph_cmd="run.pl --mem 8G"
+else
+    export train_cmd="queue.pl --mem 2G --num-threads 4"
+    #export train_cmd="queue.pl --mem 2G --num-threads 2"
+    export cuda_cmd="queue.pl --mem 4G"
+    export decode_cmd="queue.pl --mem 4G --num-threads 2"
+    export mkgraph_cmd="queue.pl --mem 8G"
+fi
