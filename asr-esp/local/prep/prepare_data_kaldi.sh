@@ -13,6 +13,7 @@ model_name=multi_en_mct_cnn_tdnnf_tgt3meg-dl
 graph_affix=_tgt3meg-dl
 replace_text=false
 data_root=data
+max_nj=20
 corpus_path=
 
 . ./cmd.sh
@@ -42,7 +43,7 @@ if [ $stage -le -1 ] && [ $stop_stage -ge -1 ]; then
 fi
 
 if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
-    ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name \
+    ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name --max-nj $max_nj \
                                         --stop_stage $feats_stop_stage \
                                         --data_root $data_root \
                                         --model_name $model_name --model_dir $model_dir \

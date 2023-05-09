@@ -118,7 +118,7 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ] ; then
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         result_dir=${decode_dir}/align_${model_name}
         # steps/chain/align_lats_ctm.sh <data-dir> <lang-dir> <src-dir> <align-dir>
-        local/kaldi_stt/align_lats_ctm.sh --cmd "queue.pl" --nj $nspk --online-ivector-dir $ivectors_data_dir --generate_ali_from_lats true $data_dir $lang $model $result_dir
+        local/kaldi_stt/align_lats_ctm.sh --cmd "$decode_cmd" --nj $nspk --online-ivector-dir $ivectors_data_dir --generate_ali_from_lats true $data_dir $lang $model $result_dir
    done
 fi
 
@@ -141,7 +141,7 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ] ; then
         
         echo "Computing GOP of $data_dir with $model"
         
-        local/gop/compute-dnn-bi-gop.sh --nj "$nspk" --cmd "queue.pl" --split_per_speaker "true" $data_dir $ivectors_data_dir \
+        local/gop/compute-dnn-bi-gop.sh --nj "$nspk" --cmd "$decode_cmd" --split_per_speaker "true" $data_dir $ivectors_data_dir \
               $lang $model $result_dir    ### dnn model    
     done
 fi

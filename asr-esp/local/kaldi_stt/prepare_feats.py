@@ -71,7 +71,7 @@ with open(data_dir + "/wav.scp", "r") as fn:
         utt_list.append(info[0])
 
 # anno. (punc)
-with open(data_dir + "/text.punc", "r") as fn:
+with open(data_dir + "/text", "r") as fn:
     for line in fn.readlines():
         info = line.split()
         text_dict[info[0]] = " ".join(info[1:])
@@ -106,7 +106,8 @@ for i, uttid in tqdm(enumerate(utt_list)):
     vp_feats_info = nlp_model.vocab_profile_feats(text)
     
     all_info[uttid] = { "stt": text, "prompt": text_prompt,
-                        "wav_path": wav_path, "ctm": word_ctm_info, 
+                        "wav_path": wav_path, 
+                        "ctm": word_ctm_info, "ctm": phn_ctm_info, 
                         "feats": {  **f0_info, **energy_info, 
                                     **sil_feats_info, **word_feats_info,
                                     **phone_feats_info, **vp_feats_info,

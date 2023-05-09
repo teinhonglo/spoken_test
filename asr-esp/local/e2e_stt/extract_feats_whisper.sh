@@ -8,6 +8,7 @@ model_name="large"
 model_tag="large"
 use_streaming=false
 stage=0
+stop_stage=1000
 # vad parameters
 vad_mode=0
 max_segment_length=15

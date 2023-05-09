@@ -12,6 +12,11 @@ test_sets="voice_2022"
 if [ $stage -le 0 ]; then
     for test_set in $test_sets; do
         data_dir=$data_root/$test_set
+        
+        if [ ! -d $data_dir ]; then
+            mkdir -p $data_dir
+        fi
+
         for f in utt2spk wav.scp spk2utt utt2dur text feats.scp cmvn.scp; do
             if [ -f $data_root/$test_set/$f ]; then
                 rm -rf $data_root/$test_set/$f;

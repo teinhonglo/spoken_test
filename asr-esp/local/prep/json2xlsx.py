@@ -51,4 +51,4 @@ for uttid in list(all_json.keys()):
 
 
 df = pd.DataFrame(xlsx_info)
-df.to_excel(os.path.join(data_dir, model_name + "-feats.xlsx"), index=False)
+df.to_excel(os.path.join(data_dir, "all.xlsx"), index=False)
