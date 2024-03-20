@@ -2,8 +2,6 @@ import os
 import json
 import soundfile
 from tqdm import tqdm
-from audio_models import AudioModel
-from vad_model import VadModel
 import numpy as np
 import sys
 import wave

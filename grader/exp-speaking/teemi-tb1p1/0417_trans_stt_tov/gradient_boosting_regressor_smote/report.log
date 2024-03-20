@@ -1,0 +1,58 @@
+ORIGIN
+scores ['content', 'pronunciation', 'vocabulary']
+content {'rmse': 1.3965220113868058, 'mcrmse': 1.5558657940077631, 'pearson': 0.6035205343040598, 'within_0.5': 28.614445671669273, 'within_1': 73.92598380816409, 'mcwithin_0.5': 23.117646709441985, 'mcwithin_1': 67.17483711921037}
+rmse             1.396522
+mcrmse           1.555866
+pearson          0.603521
+within_0.5      28.614446
+within_1        73.925984
+mcwithin_0.5    23.117647
+mcwithin_1      67.174837
+dtype: float64
+pronunciation {'rmse': 1.3286050833662113, 'mcrmse': 1.4953759186545268, 'pearson': 0.6135226370788882, 'within_0.5': 29.973252052858033, 'within_1': 75.94808542026854, 'mcwithin_0.5': 24.53628360928548, 'mcwithin_1': 69.11782818121806}
+rmse             1.328605
+mcrmse           1.495376
+pearson          0.613523
+within_0.5      29.973252
+within_1        75.948085
+mcwithin_0.5    24.536284
+mcwithin_1      69.117828
+dtype: float64
+vocabulary {'rmse': 1.3465411555716853, 'mcrmse': 1.516169432487467, 'pearson': 0.6083660777536076, 'within_0.5': 30.414905422486996, 'within_1': 75.40750843613161, 'mcwithin_0.5': 24.946626240297853, 'mcwithin_1': 67.61529867749891}
+rmse             1.346541
+mcrmse           1.516169
+pearson          0.608366
+within_0.5      30.414905
+within_1        75.407508
+mcwithin_0.5    24.946626
+mcwithin_1      67.615299
+dtype: float64
+
+CEFR
+content {'rmse': 0.7951046553578239, 'mcrmse': 0.9761545165022574, 'pearson': 0.5410186217373709, 'within_0.5': 50.928485839869275, 'within_1': 95.40351533695714, 'mcwithin_0.5': 34.03147366981161, 'mcwithin_1': 88.43748508784378}
+rmse             0.795105
+mcrmse           0.976155
+pearson          0.541019
+within_0.5      50.928486
+within_1        95.403515
+mcwithin_0.5    34.031474
+mcwithin_1      88.437485
+dtype: float64
+pronunciation {'rmse': 0.7584460038161454, 'mcrmse': 0.9490846886050543, 'pearson': 0.549241254658781, 'within_0.5': 53.014610728884506, 'within_1': 96.5785010250025, 'mcwithin_0.5': 35.12021542929421, 'mcwithin_1': 89.64669850727424}
+rmse             0.758446
+mcrmse           0.949085
+pearson          0.549241
+within_0.5      53.014611
+within_1        96.578501
+mcwithin_0.5    35.120215
+mcwithin_1      89.646699
+dtype: float64
+vocabulary {'rmse': 0.7619602828413692, 'mcrmse': 0.9548012587370569, 'pearson': 0.5442217060501828, 'within_0.5': 53.5841560610412, 'within_1': 96.19410902816435, 'mcwithin_0.5': 35.05770204398026, 'mcwithin_1': 88.99800007227087}
+rmse             0.761960
+mcrmse           0.954801
+pearson          0.544222
+within_0.5      53.584156
+within_1        96.194109
+mcwithin_0.5    35.057702
+mcwithin_1      88.998000
+dtype: float64

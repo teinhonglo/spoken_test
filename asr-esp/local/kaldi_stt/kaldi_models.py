@@ -5,6 +5,7 @@ import soundfile
 from collections import defaultdict
 from tqdm import tqdm
 from g2p_en import G2p
+import string
 import re
 
 
@@ -59,7 +60,8 @@ class SpeechModel(object):
         # Fluency
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
-        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH"]
+        self.vowels = [ "AA", "AE", "AH", "AO", "AW", "AX", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW" ]
+        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH", "HM"]
         self.special_words = ["<UNK>"]
         self.g2p = G2p()
     
@@ -302,8 +304,11 @@ class SpeechModel(object):
         phone_count_dict = defaultdict(int)
         phone_duration_list = []
         phone_conf_list = []
+        vowel_duration_list = []
+        vowel_conf_list = []
          
         response_duration = total_duration
+        
         if len(ctm_info) > 0:
             # response time
             start_time = ctm_info[0][1]
@@ -312,9 +317,14 @@ class SpeechModel(object):
             response_duration = end_time - start_time        
         
         for phone, start_time, duration, conf in ctm_info:
+            phone = phone.rstrip(string.digits+'*_')
             phone_duration_list.append(duration)
             phone_conf_list.append(conf)
-            phone_count_dict[phone] += 1  
+            phone_count_dict[phone] += 1
+            
+            if phone in self.vowels:
+                vowel_duration_list.append(duration)
+                vowel_conf_list.append(conf)
             
         # strat_time and duration of last phone
         # word in articlulation time
@@ -322,6 +332,8 @@ class SpeechModel(object):
         phone_freq = phone_count / response_duration
         phone_duration_stats = get_stats(phone_duration_list, prefix = "phone_duration_")
         phone_conf_stats = get_stats(phone_conf_list, prefix="phone_conf_")
+        vowel_duration_stats = get_stats(vowel_duration_list, prefix = "vowel_duration_")
+        vowel_conf_stats = get_stats(vowel_conf_list, prefix="vowel_conf_")
         
         phone_basic_dict = { 
                             "phone_count": phone_count,
@@ -329,6 +341,8 @@ class SpeechModel(object):
                            }
         
         phone_stats_dict = merge_dict(phone_duration_stats, phone_conf_stats)
+        vowel_stats_dict = merge_dict(vowel_duration_stats, vowel_conf_stats)
+        phone_stats_dict = merge_dict(phone_stats_dict, vowel_stats_dict)
         phone_dict = merge_dict(phone_basic_dict, phone_stats_dict)
         
         return phone_dict, response_duration

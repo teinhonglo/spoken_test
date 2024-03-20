@@ -20,6 +20,8 @@ corpus_path=
 . ./path.sh
 . parse_options.sh
 
+echo $stage
+
 set -euo pipefail
 
 if [ $stage -le -3 ] && [ $stop_stage -ge -3 ]; then
@@ -43,11 +45,18 @@ if [ $stage -le -1 ] && [ $stop_stage -ge -1 ]; then
 fi
 
 if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
-    ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name --max-nj $max_nj \
-                                        --stop_stage $feats_stop_stage \
-                                        --data_root $data_root \
-                                        --model_name $model_name --model_dir $model_dir \
-                                        --graph_affix $graph_affix
+    if [ ! -z $graph_affix ]; then
+        ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name --max-nj $max_nj \
+                                            --stop_stage $feats_stop_stage \
+                                            --data_root $data_root \
+                                            --model_name $model_name --model_dir $model_dir \
+                                            --graph_affix $graph_affix
+    else
+        ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name --max-nj $max_nj \
+                                            --stop_stage $feats_stop_stage \
+                                            --data_root $data_root \
+                                            --model_name $model_name --model_dir $model_dir 
+    fi
     
     dest_dir=$data_root/$data_name/$model_name
     

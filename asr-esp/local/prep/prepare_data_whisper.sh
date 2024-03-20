@@ -4,23 +4,25 @@ stage=0
 stop_stage=100000
 feats_stage=0
 feats_stop_stage=100000
-data_name=spoken_test_2022_jan28
-model_name=whisperv2_large
-model_tag="large"
+data_root=data/icnale
+data_name=icnale_monologue
+skip_resample="true"
 replace_text=false
 use_streaming=false
-data_root=data
-# vad parameters
-vad_mode=0
-max_segment_length=15
+use_prep_v2=false
 # whisper parameters
-use_v2="true" # true == transcribe; false==decode
-use_condition="true"
-lang="english"
+model_name=whisperx_large-v1
+model_tag="large-v1"
+use_whisperx="true"
+extra_options="--suppress_numeric_tokens --suppress_punc_tokens"
+lang="en" # en for whisperx
+corpus_path=
+
+echo "$0 $@"
+. utils/parse_options.sh
 
 . ./cmd.sh
 . ./path.sh
-. utils/parse_options.sh
 
 set -euo pipefail
 
@@ -30,20 +32,29 @@ if [ ${stage} -le -3 ] && [ ${stop_stage} -ge -3 ]; then
 fi
 
 if [ ${stage} -le -2 ] && [ ${stop_stage} -ge -2 ]; then
-    ./local/prep/create_decode_data.sh --data_root $data_root --test_sets "$data_name"
+    
+    if [ -z $corpus_path ]; then
+        corpus_path="$data_root/$data_name/wavs"
+    fi
+    if [ "$use_prep_v2" == "true" ]; then
+        ./local/prep/create_decode_datav2.sh --data_root $data_root --test_sets "$data_name" --corpus_path $corpus_path
+    else
+        ./local/prep/create_decode_data.sh --data_root $data_root --test_sets "$data_name" --corpus_path $corpus_path
+    fi
 fi
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    python local/prep/repair_and_resample.py --data_dir $data_root/$data_name
+    if [ "$skip_resample" != "true" ]; then
+        python local/prep/repair_and_resample.py --data_dir $data_root/$data_name
+    fi
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     ./local/e2e_stt/extract_feats_whisper.sh --stage $feats_stage --stop-stage $feats_stop_stage \
                                             --data_root $data_root --data_sets $data_name \
                                             --model_name $model_name --model_tag "$model_tag" \
-                                            --vad_mode $vad_mode --max_segment_length $max_segment_length \
-                                            --use_streaming $use_streaming --lang $lang --use_condition $use_condition \
-                                            --use_v2 $use_v2
+                                            --use_streaming $use_streaming --lang $lang --extra_options "$extra_options" \
+                                            --use_whisperx $use_whisperx
     
     dest_dir=$data_root/$data_name/$model_name
     

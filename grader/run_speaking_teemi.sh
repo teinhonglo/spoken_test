@@ -33,7 +33,7 @@ folds=`seq 1 $kfold`
 
 feats_path=data/pretest/2023_teemi_tb${test_book}p${part}/$model_name/all.xlsx
 data_root=data-speaking/teemi-tb${test_book}p${part}/${data_prefix}${trans_type}
-exp_root=exp-speakingv1/teemi-tb${test_book}p${part}/${data_prefix}${trans_type}
+exp_root=exp-speaking/teemi-tb${test_book}p${part}/${data_prefix}${trans_type}
 #exp_tag=multivar_linear_regression
 exp_tag=gradient_boosting_regressor_${sampling}
 

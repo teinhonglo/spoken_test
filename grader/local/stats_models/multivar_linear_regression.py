@@ -36,8 +36,8 @@ parser.add_argument("--part",
                     default="3",
                     type=str)
 
-parser.add_argument("--aspect",
-                    default="2",
+parser.add_argument("--score_name",
+                    default="pronunciation",
                     type=str)
 
 parser.add_argument("--exp_root",
@@ -59,21 +59,27 @@ parser.add_argument("--do_sample_weight",
 
 args = parser.parse_args()
 
+aspect_map = {  
+                "content": "1", 
+                "pronunciation": "2", 
+                "vocabulary": "3"
+              }
+
 # data/spoken_test_2022_jan28/grader.spk2p3s2
 model_name = args.model_name
 part = args.part
 n_resamples = args.n_resamples
-label_fn = "grader.spk2p" + part + "s" + args.aspect
+score_name = args.score_name
+label_fn = "grader.spk2p" + part + "s" + aspect_map[score_name]
 feats_fn = model_name + "-feats.xlsx"
 
 data_dir = args.data_dir
 
 spk2label = {}
 spk2feats = {}
-aspects_dict = {"1":"content", "2": "pronunciation", "3": "vocabulary"}
 n_folds = "1 2 3 4 5".split()
 
-exp_dir = os.path.join(args.exp_root, aspects_dict[args.aspect])
+exp_dir = os.path.join(args.exp_root, score_name)
 
 if not os.path.exists(exp_dir):
     print(exp_dir)
@@ -226,12 +232,18 @@ for i, spk in enumerate(feats_df["spkID"]):
     if feats_df["part"][i] != part: continue
     
     feats_vec = [float(feats_df[fk][i]) for fk in feat_keys]
-    spk2feats[spk] = feats_vec
+    
+    if spk not in spk2feats:
+        spk2feats[spk] = [feats_vec]
+    else:
+        assert part == "2"
+        spk2feats[spk].append(feats_vec)
 
 # create example
 X, y, spk_list = [], [], []
 for spk in list(spk2label.keys()):
-    X.append(spk2feats[spk])
+    feats = np.mean(np.array(spk2feats[spk]), axis=0)
+    X.append(feats)
     y.append(spk2label[spk])
     spk_list.append(spk)
 

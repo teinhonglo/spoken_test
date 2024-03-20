@@ -9,6 +9,7 @@ test_sets="voice_2022"
 . ./path.sh
 . parse_options.sh
 
+echo "creating test data"    
 if [ $stage -le 0 ]; then
     for test_set in $test_sets; do
         data_dir=$data_root/$test_set

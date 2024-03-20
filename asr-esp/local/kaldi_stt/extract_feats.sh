@@ -5,7 +5,7 @@ stop_stage=10000
 test_sets="voice_2022"
 model_dir=../models/Librispeech-model-mct-tdnnf
 model_name=
-graph_affix=_tgt3
+graph_affix=
 data_root=data
 replace_text=true
 max_nj=20
@@ -24,11 +24,6 @@ ivec_dir=$model_dir/model_online
 lang=$model_dir/data/lang_test$graph_affix
 mfcc_config=$model_dir/conf/mfcc_hires.conf
 cmvn_config=$model_dir/conf/online_cmvn.conf
-
-if [ -z $graph_affix ]; then
-    graph_affix=_tgt3
-fi
-
 graph_dir=$model_dir/model/graph${graph_affix}
 
 if [ $stage -le -2 ] && [ $stop_stage -ge -2 ] ; then    

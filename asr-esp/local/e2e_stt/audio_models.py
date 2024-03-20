@@ -70,18 +70,66 @@ class AudioModel(object):
         # removed unvoiced frames
         f0_nz_list = f0_list[np.nonzero(f0_list)]
         f0_nz_stats = get_stats(f0_nz_list, prefix="f0_nz_")
-        f0_nz_stats["f0_nz_list"] = f0_nz_list.tolist()
+        
+        # mean-var norm 
+        f0_mvn_list = self.__mvn(f0_nz_list)
+        f0_mvn_stats = get_stats(f0_mvn_list, prefix="f0_mvn_")
+        
+        # min-max norm
+        f0_mmn_list = self.__mmn(f0_nz_list)
+        f0_mmn_stats = get_stats(f0_mmn_list, prefix="f0_mmn_")
+        
+        # log norm
+        f0_lgn_list = np.log(f0_nz_list)
+        f0_lgn_stats = get_stats(f0_lgn_list, prefix="f0_lgn_")
+        
         f0_stats = merge_dict(f0_stats, f0_nz_stats)
+        f0_stats = merge_dict(f0_stats, f0_mvn_stats)
+        f0_stats = merge_dict(f0_stats, f0_mmn_stats)
+        f0_stats = merge_dict(f0_stats, f0_lgn_stats)
         
         return [f0_list, f0_stats]
     
     def get_energy(self, speech):
         rms = librosa.feature.rms(y=speech, frame_length=800, hop_length=160, center=True)
-        rms_list = rms.reshape(rms.shape[1],).astype(np.float64)
+        rms_list = rms.reshape(rms.shape[1],)
         rms_stats = get_stats(rms_list, prefix="energy_")
         rms_stats["energy_rms_list"] = rms_list.tolist()
         
+        # mean-var norm
+        rms_mvn_list = self.__mvn(rms_list)
+        rms_mvn_stats = get_stats(rms_mvn_list, prefix="rms_mvn_")
+        
+        # min-max norm
+        rms_mmn_list = self.__mmn(rms_list)
+        rms_mmn_stats = get_stats(rms_list, prefix="rms_mmn_")
+        
+        # log norm
+        rms_lgn_list = np.log(rms_list)
+        rms_lgn_stats = get_stats(rms_lgn_list, prefix="rms_lgn_")
+        
+        rms_stats = merge_dict(rms_stats, rms_mvn_stats)
+        rms_stats = merge_dict(rms_stats, rms_mmn_stats)
+        rms_stats = merge_dict(rms_stats, rms_lgn_stats)
+        
         return [rms_list, rms_stats]
+
+    # mean-var
+    def __mvn(self, np_list):
+        mean = np.mean(np_list)
+        var = np.var(np_list)
+        std = np.maximum(np.sqrt(var), 1.0e-20)
+        np_list = (np_list - mean) / std
+        
+        return np_list
+    
+    # mean-max
+    def __mmn(self, np_list):
+        max_v = np.max(np_list)
+        min_v = np.min(np_list)
+        np_list = (np_list - min_v) / (max_v - min_v)
+        
+        return np_list
     
 if __name__ == "__main__":
     import soundfile

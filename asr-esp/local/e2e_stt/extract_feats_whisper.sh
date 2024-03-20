@@ -10,25 +10,18 @@ use_streaming=false
 stage=0
 stop_stage=1000
 # vad parameters
-vad_mode=0
-max_segment_length=15
-use_v2="false"
-use_condition=false
-lang="english"
+use_whisperx="false"
+lang="en" # whisperx (en), whisper (english)
 extra_options=""
 
-. ./path.sh
-. ./cmd.sh
 
 echo "$0 $@"
 . utils/parse_options.sh
 
+. ./path.sh
+. ./cmd.sh
 
 set -euo pipefail
-
-if [ "$use_condition" == "true" ]; then
-    extra_options="$extra_options --condition_on_previous_text"
-fi
 
 if [ $stage -le 0 ]; then
     for data_set in $data_sets; do
@@ -36,17 +29,17 @@ if [ $stage -le 0 ]; then
         #    continue
         #fi
         
-        if [ "$use_v2" == "true" ]; then
-            python local/e2e_stt/prepare_feats_whisperv2.py \
+        if [ "$use_whisperx" == "true" ]; then
+            python local/e2e_stt/prepare_feats_whisperx.py \
                     --data_dir $data_root/$data_set --model_name $model_name \
-                    --model_tag "$model_tag" --vad_mode $vad_mode \
-                    --max_segment_length $max_segment_length --lang $lang \
+                    --model_tag "$model_tag" \
+                    --language $lang \
                     $extra_options
         else
             python local/e2e_stt/prepare_feats_whisper.py \
                     --data_dir $data_root/$data_set --model_name $model_name \
-                    --model_tag "$model_tag" --vad_mode $vad_mode \
-                    --max_segment_length $max_segment_length --lang $lang \
+                    --model_tag "$model_tag" \
+                    --language $lang \
                     $extra_options
         fi
     done
@@ -55,7 +48,7 @@ fi
 if [ $stage -le 1 ]; then
     for data_set in $data_sets; do
         for text in text.1p text.2p text.3p text; do
-            ref=$data_root/$data_set/$text
+            ref=$data_root/${data_set}/$text
             hyp=$data_root/$data_set/$model_name/text
             
             if [ ! -f $ref ]; then
