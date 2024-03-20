@@ -6,7 +6,7 @@ import re
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--data_dir', type=str, default="data/icnale/all/whisperv2_large")
+parser.add_argument('--data_dir', type=str, default="data/icnale/icnale_monologue/whisperx_large")
 parser.add_argument('--corpus_dir', type=str, default="../corpus/speaking/ICNALE")
 
 args = parser.parse_args()
@@ -27,7 +27,8 @@ titles = ["id", "wav_path", "spk_id", "holistic", "cefr", "trans_human", "trans_
 
 
 for part in list(partition_ids.keys()):
-    with open(os.path.join(corpus_dir, "ICNALE_partitions", part + "_ids.tsv")) as fn:
+    #with open(os.path.join(corpus_dir, "ICNALE_partitions", part + "_ids.tsv")) as fn:
+    with open(os.path.join(corpus_dir, "smil_ICNALE_partitions", part + "_ids.tsv")) as fn:
         for line in fn.readlines():
             info = line.split()
             text_id = info[0].split(".")[0]
@@ -70,7 +71,7 @@ for part in list(partition_ids.keys()):
         xlsx_info[part]["trans_stt"].append(trans_stt)    
     
 
-xlsx_fn = os.path.join(corpus_dir, "annotations_" + model_name + ".xlsx")
+xlsx_fn = os.path.join(corpus_dir, "smil_annotations_" + model_name + ".xlsx")
 
 with pd.ExcelWriter(xlsx_fn) as writer:
     for part in list(partition_ids.keys()):

@@ -9,6 +9,7 @@ model_tag="large"
 use_streaming=false
 stage=0
 stop_stage=1000
+gpuid=0
 # vad parameters
 use_whisperx="false"
 lang="en" # whisperx (en), whisper (english)
@@ -30,24 +31,26 @@ if [ $stage -le 0 ]; then
         #fi
         
         if [ "$use_whisperx" == "true" ]; then
-            python local/e2e_stt/prepare_feats_whisperx.py \
-                    --data_dir $data_root/$data_set --model_name $model_name \
-                    --model_tag "$model_tag" \
-                    --language $lang \
-                    $extra_options
+            CUDA_VISIBLE_DEVICES=$gpuid \
+                python local/e2e_stt/prepare_feats_whisperx.py \
+                        --data_dir $data_root/$data_set --model_name $model_name \
+                        --model_tag "$model_tag" \
+                        --language $lang \
+                        $extra_options
         else
-            python local/e2e_stt/prepare_feats_whisper.py \
-                    --data_dir $data_root/$data_set --model_name $model_name \
-                    --model_tag "$model_tag" \
-                    --language $lang \
-                    $extra_options
+            CUDA_VISIBLE_DEVICES=$gpuid \
+                python local/e2e_stt/prepare_feats_whisper.py \
+                        --data_dir $data_root/$data_set --model_name $model_name \
+                        --model_tag "$model_tag" \
+                        --language $lang \
+                        $extra_options
         fi
     done
 fi
 
 if [ $stage -le 1 ]; then
     for data_set in $data_sets; do
-        for text in text.1p text.2p text.3p text; do
+        for text in text; do
             ref=$data_root/${data_set}/$text
             hyp=$data_root/$data_set/$model_name/text
             

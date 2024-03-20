@@ -2,12 +2,13 @@
 
 stage=0
 stop_stage=10000
+data_root=data
 data_name=spoken_test_2022_jan28
 model_name=gigaspeech
 model_tag="Shinji Watanabe/gigaspeech_asr_train_asr_raw_en_bpe5000_valid.acc.ave"
 replace_text=false
 use_streaming=false
-data_root=data
+gpuid=0
 # vad parameters
 vad_mode=0
 max_segment_length=15
@@ -36,7 +37,7 @@ fi
 conda activate
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name \
+    ./local/e2e_stt/extract_feats.sh --data_root $data_root --data_sets $data_name --gpuid 0 \
                                     --model_name $model_name --model_tag "$model_tag" \
                                     --vad_mode $vad_mode --max_segment_length $max_segment_length --use_streaming $use_streaming
     

@@ -10,6 +10,7 @@ skip_resample="true"
 replace_text=false
 use_streaming=false
 use_prep_v2=false
+gpuid=0
 # whisper parameters
 model_name=whisperx_large-v1
 model_tag="large-v1"
@@ -54,7 +55,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
                                             --data_root $data_root --data_sets $data_name \
                                             --model_name $model_name --model_tag "$model_tag" \
                                             --use_streaming $use_streaming --lang $lang --extra_options "$extra_options" \
-                                            --use_whisperx $use_whisperx
+                                            --use_whisperx $use_whisperx --gpuid $gpuid
     
     dest_dir=$data_root/$data_name/$model_name
     

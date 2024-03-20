@@ -1,4 +1,4 @@
-MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-cu11
+MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-hakka
 KALDI_ROOT=$MAIN_ROOT/tools/kaldi
 
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PATH
@@ -15,3 +15,19 @@ export OMP_NUM_THREADS=1
 # NOTE(kan-bayashi): Use UTF-8 in Python to avoid UnicodeDecodeError when LC_ALL=C
 export PYTHONIOENCODING=UTF-8
 export PYTHONDONTWRITEBYTECODE=1
+
+if [ ! -d scripts ]; then
+    ln -s $MAIN_ROOT/egs2/TEMPLATE/asr1/scripts .
+fi
+
+if [ ! -d pyscripts ]; then
+    ln -s $MAIN_ROOT/egs2/TEMPLATE/asr1/pyscripts .
+fi
+
+if [ ! -d steps ]; then
+    ln -s $KALDI_ROOT/egs/wsj/s5/steps .
+fi
+
+if [ ! -d utils ]; then
+    ln -s $KALDI_ROOT/egs/wsj/s5/utils .
+fi
