@@ -59,6 +59,8 @@ parser.add_argument("--suppress_numeric_tokens", action="store_true")
 
 parser.add_argument("--suppress_punc_tokens", action="store_true")
 
+parser.add_argument("--stt_only", action="store_true")
+
 args = parser.parse_args()
 
 data_dir = args.data_dir
@@ -68,6 +70,7 @@ sample_rate = args.sample_rate
 language = args.language
 condition_on_previous_text = args.condition_on_previous_text
 device = args.device
+stt_only = args.stt_only
 
 print(model_tag, language)
 if condition_on_previous_text:
@@ -115,8 +118,14 @@ for i, uttid in tqdm(enumerate(utt_list)):
     assert rate == sample_rate
     total_duration = speech.shape[0] / rate
     # audio feature
-    _, f0_info = audio_model.get_f0(speech)
-    _, energy_info = audio_model.get_energy(speech)
+    
+    if not stt_only:
+        try:
+            _, f0_info = audio_model.get_f0(speech)
+            _, energy_info = audio_model.get_energy(speech)
+        except Exception as e:
+            print(e)
+            continue
     # fluency feature and confidence feature
     # alignment (stt)
     
@@ -129,19 +138,24 @@ for i, uttid in tqdm(enumerate(utt_list)):
     text, text_norm = text_result
     word_ctm_info, phn_ctm_info = ctm_results
     
-    sil_feats_info, response_duration = speech_model.sil_feats(word_ctm_info, total_duration)
-    word_feats_info, response_duration = speech_model.word_feats(word_ctm_info, total_duration)
-    phone_feats_info, response_duration = speech_model.phone_feats(phn_ctm_info, total_duration)
-    vp_feats_info = nlp_model.vocab_profile_feats(text_norm)
+    if not stt_only:
+        sil_feats_info, response_duration = speech_model.sil_feats(word_ctm_info, total_duration)
+        word_feats_info, response_duration = speech_model.word_feats(word_ctm_info, total_duration)
+        phone_feats_info, response_duration = speech_model.phone_feats(phn_ctm_info, total_duration)
+        vp_feats_info = nlp_model.vocab_profile_feats(text_norm)
     
-    all_info[uttid] = { "stt": text, "prompt": text_prompt,
-                        "wav_path": wav_path, 
-                        "word_ctm": word_ctm_info, "ctm": phn_ctm_info, 
-                        "feats": {  **f0_info, **energy_info, 
+        all_info[uttid] = { "stt": text, "prompt": text_prompt,
+                            "wav_path": wav_path, 
+                            "word_ctm": word_ctm_info, "ctm": phn_ctm_info, 
+                            "feats": {  **f0_info, **energy_info, 
                                     **sil_feats_info, **word_feats_info,
                                     **phone_feats_info, **vp_feats_info,
                                     "total_duration": total_duration,
                                     "response_duration": response_duration}}
+    else:
+        all_info[uttid] = { "stt": text, "prompt": text_prompt,
+                            "wav_path": wav_path, 
+                          }
     
     if i % 1000 == 0:
         print(all_info[uttid])

@@ -61,7 +61,9 @@ class SpeechModel(object):
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
         self.vowels = [ "AA", "AE", "AH", "AO", "AW", "AX", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW" ]
-        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH", "HM"]
+        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH", "HM", "HMM", 
+                                 "Ah", "Um", "Uh", "Em", "Oh", "Hm", "Hmm", 
+                                 "ah", "um", "uh", "em", "oh", "hm", "hmm"]
         self.special_words = ["<UNK>"]
         self.g2p = G2p()
         # STT
@@ -87,6 +89,7 @@ class SpeechModel(object):
         self.language = language
         self.decode_options = {"suppress_tokens": suppress_tokens}
         self.decode_options["condition_on_previous_text"] = condition_on_previous_text
+        self.decode_options["suppress_numerals"] = True
         self.device = device
         # stt model
         self.model = whisperx.load_model(tag, self.device, compute_type=self.compute_type, language=self.language, asr_options=self.decode_options)
