@@ -1,4 +1,4 @@
-MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-hakka
+MAIN_ROOT=/share/nas167/teinhonglo/espnets/espnet-owsm
 KALDI_ROOT=$MAIN_ROOT/tools/kaldi
 
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PATH

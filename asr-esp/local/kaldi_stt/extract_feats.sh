@@ -8,6 +8,7 @@ model_name=
 graph_affix=
 data_root=data
 replace_text=true
+skip_decoding=true
 max_nj=20
 
 . ./cmd.sh
@@ -83,17 +84,23 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ] ; then
     for test_set in $test_sets; do
         decode_dir=${model}_online/decode_${test_set}${graph_affix}
         dest_dir=$data_root/$test_set/$model_name
-        if [ ! -d $dest_dir ]; then
-            mkdir -p $dest_dir
-        fi
         
-        utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
-        best_wer=${decode_dir}/scoring_kaldi/best_wer
-        recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
-        recog_text=$decode_dir/scoring_kaldi/$recog_fn
-        echo "Copy from $recog_text to $dest_dir/text"
-        cp $recog_text $dest_dir/text
-        sed -i "s: <[A-Z_]\+>::g" $dest_dir/text
+        if [ "$skip_decoding" == "true" ]; then
+            echo "SKIP DECODING! Copy from $data_root/$test_set/text to $dest_dir/text"
+            cp $data_root/$test_set/text $dest_dir/text
+        else
+            if [ ! -d $dest_dir ]; then
+                mkdir -p $dest_dir
+            fi
+            
+            utils/copy_data_dir.sh $data_root/${test_set} $dest_dir
+            best_wer=${decode_dir}/scoring_kaldi/best_wer
+            recog_fn=`awk '{print $NF}' $best_wer | awk -F"/" '{print $NF}' | awk -F"_" '{print "penalty_"$3"/"$2".txt"}'`
+            recog_text=$decode_dir/scoring_kaldi/$recog_fn
+            echo "Copy from $recog_text to $dest_dir/text"
+            cp $recog_text $dest_dir/text
+            sed -i "s: <[A-Z_]\+>::g" $dest_dir/text
+        fi
     done
 fi
 

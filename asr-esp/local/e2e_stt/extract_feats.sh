@@ -27,10 +27,7 @@ if [ $stage -le 0 ]; then
         if [ "$use_streaming" == "false" ]; then
             CUDA_VISIBLE_DEVICES=$gpuid \
                 python local/e2e_stt/prepare_feats.py --data_dir $data_root/$data_set --model_name $model_name \
-                                                  --model_tag "$model_tag" --vad_mode $vad_mode --max_segment_length $max_segment_length
-        else
-            CUDA_VISIBLE_DEVICES=$gpuid python local/e2e_stt/prepare_feats_streaming.py --data_dir $data_root/$data_set --model_name $model_name \
-                                              --model_tag "$model_tag" --vad_mode $vad_mode --max_segment_length $max_segment_length
+                                                  --model_tag "$model_tag"
         fi
     done
 fi

@@ -58,7 +58,7 @@ class NlpModel(object):
                 cefr_dict_path="/share/nas167/teinhonglo/AcousticModel/spoken_test/corpus/speaking/CEFR-J_Wordlist_Ver1.6.xlsx"):
                 #cefr_dict_path="/share/nas167/teinhonglo/AcousticModel/spoken_test/corpus/speaking/CEFR-J_Wordlist_Ver1.6_with_C1C2.xlsx"):
         
-        self.nlp_tokenize = stanza.Pipeline(lang='en', processors='tokenize,pos,lemma', use_gpu='False', tokenize_pretokenized=tokenize_pretokenized)
+        self.nlp_tokenize = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos,lemma,depparse', use_gpu='False', tokenize_pretokenized=tokenize_pretokenized)
         self.cefr_dict = self.__build_cefr_dict(cefr_dict_path)
         self.cefr_levels = ["a1", "a2", "b1", "b2"]
         self.pos_tags = ["ADJ", "ADP", "ADV", "AUX", 
@@ -92,6 +92,8 @@ class NlpModel(object):
         pos_info = {pt: 0 for pt in self.pos_tags}
         vp_list = []
         pos_list = []
+        mor_list = []
+        dep_list = []
         
         doc = self.nlp_tokenize(text.lower())
         hit_dict = defaultdict(dict)
@@ -100,10 +102,13 @@ class NlpModel(object):
             for wi, word in enumerate(sent.words):
                 lemma_word = word.lemma
                 upos = word.pos
+                mor = word.feats
+                dep = word.deprel
+                
                 pos_info[upos] += 1
                 
-                if lemma_word in hit_dict and upos in hit_dict[lemma_word]:
-                    continue
+                #if lemma_word in hit_dict and upos in hit_dict[lemma_word]:
+                #    continue
                 
                 try:
                     word_cefr = self.cefr_dict[lemma_word][upos]
@@ -116,7 +121,9 @@ class NlpModel(object):
                 
                 vp_list.append(word_cefr)
                 pos_list.append(upos)
-                
+                mor_list.append(mor)
+                dep_list.append(dep)
+                        
         prefix = "vp_"
         # add prefix
         vocab_feats = {"vp_list": vp_list}
@@ -126,19 +133,28 @@ class NlpModel(object):
         
         prefix = "pos_"
         pos_feats = {"pos_list": pos_list}
+        
         for pos, num in pos_info.items():
             pos_feats[prefix + pos] = num
         
         nlp_feats = merge_dict(vocab_feats, pos_feats)
         
+        mor_feats = {"mor_list": mor_list}
+        nlp_feats = merge_dict(nlp_feats, mor_feats)
+        dep_feats = {"dep_list": dep_list}
+        nlp_feats = merge_dict(nlp_feats, dep_feats)
+        
         return nlp_feats
        
   
 if __name__ == '__main__':
-    text = "I'M TAKING A TEST AND I'M BORED HIM | WELL MY FAVORITE MUSIC IS COUNTRY MUSIC BECAUSE IT HELPS ME RELAX | I WAS THIRTEEN YEARS OLD WHEN I WENT TO JUNIOR HIGH SCHOOL GYM CLOTHES | WE SHOULDN'T TALK LOUDLY ON THE TRAIN IN RESTAURANTS FOR EXAMPLE | I WOULD KEEP TAKING A SHOWER WHEN THE LIGHTS ARE OUT | I WOULD FEEL MORE RELAXED IN THE EVENING BECAUSE I USUALLY EXERCISE AFTERWARD TAKE A SHOWER AND THEN WHERE SOME MORE COMFORT COMFORTABLE CLOTHES SO AND WATCH MY VERY SERIOUS AND THESE THINGS MAKE ME RELAXED | BECAUSE FAST FOOD IN FAST FOOD THERE IS USUALLY ISN'T ENOUGH FIBRE AND THEIR USE OF FIFA FUCK FAST FOOD IS USUALLY FRIED AND IS OFTEN EASIER THAN OTHER FOOD AND I DON'T KNOW NUTRITIOUS ENOUGH | I THINK I CAN MORE EASILY ANGRY AT WORK AND I DON'T KNOW JOGGING CALMS ME DOWN AND I LIKE TO BE ALONE WHEN I GET ANGRY I DON'T WANT TO BE IN A CROWDED PLACES WHEN I'M FEELING UPSET | WELL I WENT HOME ON LABOR DAY WEEKEND AND I PAID WITH MY LITTLE NIECE SO AH I I GAVE MY LITTLE NIECE A SMALL PATCH OF DOUGH IN TARTAR HOW TOO NEAT AND SHAPE THE DOUGH AND I ALSO PUT SOME FEELING I HAVE MOSTLY MASH SWEET POTATOES IN JUDAH DOUGH AND | I RATHER SEE A WESTERN MOVIE BECAUSE WESTERN MOVIES ARE USUALLY MORE CREATIVE IN THEIR CLASS AND THEY HAVE USUALLY WITH YOUR LINES AND LIKE I GUESS THESE TWO WESTERN NUMERACY AND I LIKE MOVIES"
+    text = "I agree with the statement. We had many holidays, which is longer than others. Most of us were planning to find a part-time job in order to kill the boring time while we got the news. So it was the same with me.  My friends had work experience and had a more independent life. They are willing to share their interesting work experience with me. In their work life, they met many difficulties. They would try to do something only they are. Different kinds of setbacks made them more strong and going easy on everything afterwards.  I feel the sound of a shampoo."
+
     nlp_model = NlpModel()
     vp_feats = nlp_model.vocab_profile_feats(text)
     print(vp_feats)
+    print(len(vp_feats["pos_list"]))
+    print(len(text.split(" ")))
 
 
 

@@ -61,7 +61,9 @@ class SpeechModel(object):
         self.sil_seconds = 0.145
         self.long_sil_seconds = 0.495
         self.vowels = [ "AA", "AE", "AH", "AO", "AW", "AX", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW" ]
-        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH", "HM"]
+        self.disflunecy_words = ["AH", "UM", "UH", "EM", "OH", "HM", "HMM", 
+                                 "Ah", "Um", "Uh", "Em", "Oh", "Hm", "Hmm", 
+                                 "ah", "um", "uh", "em", "oh", "hm", "hmm"]
         self.special_words = ["<UNK>"]
         self.g2p = G2p()
     

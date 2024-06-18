@@ -6,14 +6,17 @@ feats_stage=0
 feats_stop_stage=10000
 xlsx_stage=0
 xlsx_stop_stage=10000
+# data-related
 skip_resample="true"
+data_root=data
 data_name=gept_b1
+replace_text=false
+# model-related
 model_dir=../models/multi_en-cnn_tdnn_1a_train_cleaned_mct
 model_name=multi_en_mct_cnn_tdnnf_tgt3meg-dl
 graph_affix=_tgt3meg-dl
-replace_text=false
-data_root=data
 max_nj=20
+skip_decoding=false
 corpus_path=
 
 . ./cmd.sh
@@ -50,11 +53,13 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
                                             --stop_stage $feats_stop_stage \
                                             --data_root $data_root \
                                             --model_name $model_name --model_dir $model_dir \
+                                            --skip_decoding $skip_decoding \
                                             --graph_affix $graph_affix
     else
         ./local/kaldi_stt/extract_feats.sh  --stage $feats_stage --test_sets $data_name --max-nj $max_nj \
                                             --stop_stage $feats_stop_stage \
                                             --data_root $data_root \
+                                            --skip_decoding $skip_decoding \
                                             --model_name $model_name --model_dir $model_dir 
     fi
     
