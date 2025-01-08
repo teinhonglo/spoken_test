@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import argparse
 
-from utils import read_corpus
+from utils import read_corpus_phonics
 from metrics_cpu import compute_metrics
 
 
@@ -31,10 +31,6 @@ parser.add_argument("--corpus",
 
 parser.add_argument("--data_dir",
                     default="data-speaking/tb1p1/trans_stt/1",
-                    type=str)
-
-parser.add_argument("--feats_path",
-                    default="data/pretest/2023_teemi/multi_en_mct_cnn_tdnnf_tgt3meg-dl/all.json",
                     type=str)
 
 parser.add_argument("--score_name",
@@ -58,14 +54,13 @@ args = parser.parse_args()
 corpus = args.corpus
 data_dir = args.data_dir
 score_name = args.score_name
-feats_path = args.feats_path
 num_labels = args.num_labels
 exp_dir = args.exp_dir
 sampling = args.sampling
 
 params = {
     "n_estimators": 100,
-    "max_depth": 3,
+    "max_depth": 10,
     "min_samples_split": 2,
     "learning_rate": 0.1,
     "loss": "squared_error",
@@ -84,39 +79,29 @@ def feature_selection(X, y):
     
     return selector, importances, std
 
-train_levels, train_info = read_corpus(data_dir + '/train.tsv', num_labels, score_name, corpus)
-valid_levels, valid_info = read_corpus(data_dir + '/valid.tsv', num_labels, score_name, corpus)
-test_levels, test_info = read_corpus(data_dir + '/test.tsv', num_labels, score_name, corpus)
+train_levels, train_info = read_corpus_phonics(data_dir + '/train.tsv', num_labels, score_name, corpus)
+valid_levels, valid_info = read_corpus_phonics(data_dir + '/valid.tsv', num_labels, score_name, corpus)
+test_levels, test_info = read_corpus_phonics(data_dir + '/test.tsv', num_labels, score_name, corpus)
 
-# prepare feature matrix from feats_path
-feats_df = pd.read_excel(feats_path, dtype=str)
-feat_keys = [fk for fk in list(feats_df.keys())[6:] if "list" not in fk and "voiced_probs" not in fk]
-feat_keys = np.array(feat_keys)
-feats_mat_dict = {}
+train_feats = [ train_info["feats"][i] for i, text_id in enumerate(train_info["ids"])]
+valid_feats = [ valid_info["feats"][i] for i, text_id in enumerate(valid_info["ids"])]
+test_feats = [ test_info["feats"][i] for i, text_id in enumerate(test_info["ids"])]
 
-# 在teemi中，text_id在前處理時(抽特徵)會被處理成fname。
-for i, text_id in enumerate(feats_df["fname"]):
-    if text_id in feats_mat_dict:
-        print("[Prepare Feats] The ID {} should be unique. Remember to check the feature file {} again.".format(text_id, feats_path))
-        exit(0)
-    feats_vec = [float(feats_df[fk][i]) for fk in feat_keys]
-    feats_mat_dict[text_id]  = feats_vec
-
-train_feats = [ feats_mat_dict[text_id] for text_id in train_info["ids"]]
-valid_feats = [ feats_mat_dict[text_id] for text_id in valid_info["ids"]]
-test_feats = [ feats_mat_dict[text_id] for text_id in test_info["ids"]]
-
-# NOTE: valid == test
-X_train, X_test = train_feats, valid_feats
-y_train, y_test = train_levels, valid_levels
+# NOTE: valid != test
+#X_train, X_test = train_feats + valid_feats, test_feats
+#y_train, y_test = np.array(train_levels.tolist() + valid_levels.tolist()), test_levels
+X_train, X_test = train_feats, test_feats
+y_train, y_test = train_levels, test_levels
 
 # feature selection
+#feat_keys = np.array(train_info["feat_keys"])
 #selector, importances, std = feature_selection(X_train, y_train)
 #select_support = selector.get_support() * 1
 #select_feat_keys = feat_keys[np.nonzero(select_support)]
 
 #X_train = selector.transform(X_train)
 #X_test = selector.transform(X_test)
+
 if sampling == "smote":
     X_train, y_train = over_sampling.SMOTE(random_state=66).fit_resample(X_train, y_train) 
 elif sampling == "bsmote":
@@ -141,12 +126,11 @@ y_pred = model.predict(X_test)
 #print(feat_nz_keys[np.argsort(-1 * coef_)])
 #print(coef_[np.argsort(-1 * coef_)])
     
-
 gold_labels, pred_labels = y_test.tolist(), y_pred.tolist()
 total_losses = {}
 compute_metrics(total_losses, y_test, y_pred)
 
-model_name = "MLR-mcrmse={}.ckpt".format(float(total_losses["mcrmse"]))
+model_name = "MGB-mcrmse={}.ckpt".format(float(total_losses["mcrmse"]))
 joblib.dump(model, os.path.join(model_dir, model_name))
 model = joblib.load(os.path.join(model_dir, model_name))
 

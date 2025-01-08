@@ -46,6 +46,27 @@ def read_corpus(path, num_labels, score_name, corpus="teemi"):
 
     return levels, {"ids": ids, "prompts": prompts, "sents": sents, "wav_paths": wav_paths, "extra_embs": extra_embs}
 
+def read_corpus_phonics(path, num_labels, score_name, corpus="phonics", ignored_columns=["text_id", "fluency", "accuracy"]):
+    ids, feats, feat_keys, levels = [], [], [], []
+    #nlp_model = NlpModel()
+
+    lines = _read_tsv(path)
+    for i, line in enumerate(lines):
+        
+        if i == 0:
+            columns = {key:header_index for header_index, key in enumerate(line)}
+            feat_keys = [ k for k in list(columns.keys()) if k not in ignored_columns ]
+            continue
+       
+        text_id = line[columns["text_id"]]
+        ids.append(text_id)
+        feats.append([float(line[columns[k]]) for k in list(columns.keys()) if k not in ignored_columns])
+        levels.append(float(line[columns[score_name]])) # 0-4 for fluency scores; 0-6 for accuracy scores
+
+    levels = np.array(levels)
+
+    return levels, {"ids": ids, "feats": feats, "feat_keys": feat_keys}
+
 
 def _read_tsv(input_file, quotechar=None):
     print(input_file)

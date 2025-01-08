@@ -49,10 +49,6 @@ parser.add_argument("--cefr_bins",
 parser.add_argument("--merged_speaker",
                     action="store_true")
 
-parser.add_argument("--question_type",
-                    default="tb1p1",
-                    type=str)
-
 args = parser.parse_args()
 
 
@@ -68,8 +64,8 @@ def filled_csv(csv_dict, result_root, score, nf, text_ids):
         for i, line in enumerate(fn.readlines()):
             text_id = text_ids[nf][i]
             pred_score, anno_score = line.split()
-            pred_score = float(pred_score.split()[0]) + 1
-            anno_score = float(anno_score.split()[0]) + 1
+            pred_score = float(pred_score.split()[0])
+            anno_score = float(anno_score.split()[0])
             
             assert csv_dict[nf][text_id]["anno"][score] == anno_score
             csv_dict[nf][text_id]["pred"][score] = pred_score
@@ -96,8 +92,8 @@ def evaluation(total_losses_score_nf, evaluate_dict, target_score="organization"
     all_score_annos = np.array(all_score_annos)
     
     if np_bins is not None:
-        all_score_preds_dig = np.digitize(all_score_preds, np_bins) + 1
-        all_score_annos_dig = np.digitize(all_score_annos, np_bins) + 1
+        all_score_preds_dig = np.digitize(all_score_preds, np_bins)
+        all_score_annos_dig = np.digitize(all_score_annos, np_bins)
     
     compute_metrics(total_losses_score_nf["origin"], all_score_preds_dig, all_score_annos_dig)
      
@@ -127,21 +123,12 @@ def do_merge_speaker(csv_dict, nq, scores):
                     
     return new_csv_dict
 
-number_questions = {
-                    "tb1p1": 5,
-                    "tb1p2": 3,
-                    "tb2p1": 5,
-                    "tb2p3": 2,
-                    "tb3p2": 1,
-                    "tb3p3": 3
-                   }
 
 data_dir = args.data_dir
 n_folds = args.folds.split()
 result_root = args.result_root
 scores = args.scores.split()
 merged_speaker = args.merged_speaker
-question_type = args.question_type
 
 csv_header = "text_id " + " ".join(scores)
 csv_header = csv_header.split()
@@ -222,13 +209,17 @@ for score in scores:
     ave_losses = {k:0 for k in list(total_losses[score][n_folds[0]]["origin"].keys())}
     df_losses = {k:[] for k in list(total_losses[score][n_folds[0]]["origin"].keys())}
     
+    print(score)
     for nf in n_folds: 
         for metric in list(total_losses[score][nf]["origin"].keys()):
             ave_losses[metric] += 1/len(n_folds) * total_losses[score][nf]["origin"][metric]
             df_losses[metric].append(total_losses[score][nf]["origin"][metric])
+        
+        for metric in list(total_losses[score][nf]["origin"].keys()):
+            print(f"fold {nf}", metric, df_losses[metric][int(nf) - 1])
+        print()
 
     average_losses[score] = ave_losses
-    print(score, ave_losses)
     df_losses = pd.DataFrame.from_dict(df_losses)
     print(df_losses.mean())
 
